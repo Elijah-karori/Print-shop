@@ -14,16 +14,19 @@ type Config struct {
 	Env         string
 	DatabaseURL string
 
-	JWTSecret         string
-	TicketLookupSalt  string
+	SupabaseURL string
+	SupabaseKey string
 
-	MpesaEnv         string
-	MpesaConsumerKey string
+	JWTSecret        string
+	TicketLookupSalt string
+
+	MpesaEnv            string
+	MpesaConsumerKey    string
 	MpesaConsumerSecret string
-	MpesaShortcode   string
-	MpesaPasskey     string
-	MpesaCallbackURL string
-	MpesaTillNumber  string
+	MpesaShortcode      string
+	MpesaPasskey        string
+	MpesaCallbackURL    string
+	MpesaTillNumber     string
 
 	WhatsAppPhoneNumberID string
 	WhatsAppAccessToken   string
@@ -40,6 +43,9 @@ func Load() *Config {
 		Port:        getEnv("PORT", "8080"),
 		Env:         getEnv("ENV", "development"),
 		DatabaseURL: getEnv("DATABASE_URL", ""),
+
+		SupabaseURL: getEnv("SUPABASE_URL", ""),
+		SupabaseKey: getEnv("SUPABASE_KEY", ""),
 
 		JWTSecret:        getEnv("JWT_SECRET", ""),
 		TicketLookupSalt: getEnv("TICKET_LOOKUP_SALT", ""),

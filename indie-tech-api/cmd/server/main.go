@@ -13,6 +13,7 @@ import (
 	"github.com/elijah-karori/indie-tech-api/internal/mpesa"
 	"github.com/elijah-karori/indie-tech-api/internal/notify"
 	"github.com/elijah-karori/indie-tech-api/internal/routes"
+	"github.com/elijah-karori/indie-tech-api/internal/supabase"
 )
 
 func main() {
@@ -25,6 +26,11 @@ func main() {
 	}
 	defer pool.Close()
 
+	supabaseClient := supabase.NewClient(cfg)
+	if supabaseClient != nil {
+		log.Println("Supabase client initialized successfully")
+	}
+
 	mpesaClient := mpesa.NewClient(cfg)
 	whatsapp := notify.NewWhatsAppNotifier(cfg)
 
@@ -34,6 +40,7 @@ func main() {
 		Package:       handlers.NewPackageHandler(pool),
 		Part:          handlers.NewPartHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
+		Supabase:      supabaseClient,
 	}
 
 	e := echo.New()

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	supa "github.com/supabase-community/supabase-go"
 	"github.com/labstack/echo/v4"
 
 	"github.com/elijah-karori/indie-tech-api/internal/config"
@@ -14,6 +15,7 @@ type Handlers struct {
 	Package       *handlers.PackageHandler
 	Part          *handlers.PartHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
+	Supabase      *supa.Client
 }
 
 // Register wires up all routes. Public client-facing endpoints (booking a
