@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #15181B;
+  color: #E8EAED;
+}
+
+/* Faint circuit-trace texture on the page background — quiet, not decorative noise */
+.trace-bg {
+  background-image:
+    linear-gradient(90deg, rgba(62, 207, 142, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(62, 207, 142, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Visible keyboard focus, respected everywhere — not just on hover */
+:focus-visible {
+  outline: 2px solid #3ECF8E;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
