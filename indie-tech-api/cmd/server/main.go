@@ -39,6 +39,7 @@ func main() {
 		Order:         handlers.NewOrderHandler(pool, mpesaClient),
 		Package:       handlers.NewPackageHandler(pool),
 		Part:          handlers.NewPartHandler(pool),
+		Blog:          handlers.NewBlogHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
 		Supabase:      supabaseClient,
 	}

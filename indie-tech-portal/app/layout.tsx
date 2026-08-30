@@ -3,8 +3,8 @@ import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Indie Tech Services — Repair Tickets',
-  description: 'Book a repair, track your ticket, no account needed.',
+  title: 'Indie Tech Services — Repair Tickets & Guides',
+  description: 'Book a repair, track your ticket, buy parts, and read service guides.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/shop" className="hover:text-diag transition-colors">
                 SHOP
+              </Link>
+              <Link href="/blog" className="hover:text-diag transition-colors">
+                BLOG &amp; GUIDES
               </Link>
             </nav>
           </div>

@@ -14,6 +14,7 @@ type Handlers struct {
 	Order         *handlers.OrderHandler
 	Package       *handlers.PackageHandler
 	Part          *handlers.PartHandler
+	Blog          *handlers.BlogHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
 	Supabase      *supa.Client
 }
@@ -33,6 +34,10 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	api.GET("/parts", h.Part.List)
 	api.POST("/orders/checkout", h.Order.Checkout)
 	api.GET("/orders/:id/status", h.Order.Status)
+
+	// --- Public: blog & service guides ---
+	api.GET("/blog", h.Blog.List)
+	api.GET("/blog/:slug", h.Blog.GetBySlug)
 
 	// --- M-Pesa webhook: must stay unauthenticated (Safaricom calls this directly) ---
 	api.POST("/mpesa/callback", h.MpesaCallback.HandleCallback)

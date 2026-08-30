@@ -1,9 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+export const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export type TicketStatus =
   | 'received'
@@ -55,6 +56,17 @@ export interface Part {
   price_kes: number;
   stock_qty: number;
   active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  body_md: string;
+  excerpt?: string;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -160,6 +172,42 @@ export async function listParts(): Promise<Part[]> {
     }
   }
   return request<Part[]>('/api/v1/parts');
+}
+
+export async function listBlogPosts(): Promise<BlogPost[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .not('published_at', 'is', null)
+        .order('published_at', { ascending: false });
+      if (!error && data) {
+        return data as BlogPost[];
+      }
+    } catch {
+      // Fallback to API base if Supabase request fails
+    }
+  }
+  return request<BlogPost[]>('/api/v1/blog');
+}
+
+export async function getBlogPost(slug: string): Promise<BlogPost> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+      if (!error && data) {
+        return data as BlogPost;
+      }
+    } catch {
+      // Fallback to API base if Supabase request fails
+    }
+  }
+  return request<BlogPost>(`/api/v1/blog/${slug}`);
 }
 
 export function checkout(input: CheckoutInput): Promise<CheckoutResponse> {
