@@ -40,6 +40,9 @@ func main() {
 		Package:       handlers.NewPackageHandler(pool),
 		Part:          handlers.NewPartHandler(pool),
 		Blog:          handlers.NewBlogHandler(pool),
+		Telemetry:     handlers.NewTelemetryHandler(pool),
+		Inventory:     handlers.NewInventoryHandler(pool),
+		JobCard:       handlers.NewJobCardHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
 		Supabase:      supabaseClient,
 	}

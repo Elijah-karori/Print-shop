@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { lookupTicket, APIError, type Ticket } from '@/lib/api';
+import Link from 'next/link';
+import { lookupTicket, getJobCardsByTicket, APIError, type Ticket, type JobCard } from '@/lib/api';
 import { StatusTicker } from '@/components/StatusTicker';
 
 function TrackPageInner() {
@@ -10,6 +11,7 @@ function TrackPageInner() {
   const [code, setCode] = useState(searchParams.get('code') ?? '');
   const [phone, setPhone] = useState(searchParams.get('phone') ?? '');
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,9 +19,16 @@ function TrackPageInner() {
     setLoading(true);
     setError(null);
     setTicket(null);
+    setJobCards([]);
     try {
       const t = await lookupTicket(lookupCode.trim(), lookupPhone.trim());
       setTicket(t);
+      try {
+        const jcs = await getJobCardsByTicket(t.id);
+        setJobCards(jcs);
+      } catch {
+        // optional job card lookup
+      }
     } catch (err) {
       if (err instanceof APIError && err.status === 404) {
         setError("No ticket found for that code and phone number — double-check both and try again.");
@@ -97,17 +106,22 @@ function TrackPageInner() {
               <p className="font-mono text-xs tracking-wider text-inkMuted">TICKET</p>
               <p className="font-mono text-lg text-ink">{ticket.ticket_code}</p>
             </div>
-            {ticket.priority === 'emergency' && (
-              <span className="rounded border border-amber/40 bg-amber/10 px-2 py-1 font-mono text-[10px] tracking-wider text-amber">
-                EMERGENCY
+            <div className="flex gap-2">
+              <span className="rounded border border-diag/40 bg-diag/10 px-2 py-1 font-mono text-[10px] tracking-wider text-diag">
+                {(ticket.maintenance_type || 'corrective').toUpperCase()}
               </span>
-            )}
+              {ticket.priority === 'emergency' && (
+                <span className="rounded border border-amber/40 bg-amber/10 px-2 py-1 font-mono text-[10px] tracking-wider text-amber">
+                  EMERGENCY
+                </span>
+              )}
+            </div>
           </div>
 
           <StatusTicker status={ticket.status} />
 
           <div className="border-t border-line pt-4">
-            <p className="font-mono text-xs tracking-wider text-inkMuted">ISSUE</p>
+            <p className="font-mono text-xs tracking-wider text-inkMuted">ISSUE / SERVICE SCOPE</p>
             <p className="mt-1 text-sm text-ink">{ticket.issue_desc}</p>
           </div>
 
@@ -120,6 +134,28 @@ function TrackPageInner() {
                   timeStyle: 'short',
                 })}
               </p>
+            </div>
+          )}
+
+          {jobCards.length > 0 && (
+            <div className="border-t border-line pt-4 space-y-3">
+              <p className="font-mono text-xs tracking-wider text-amber">MACHINE JOB CARDS &amp; REPORTS</p>
+              <div className="space-y-2">
+                {jobCards.map((jc) => (
+                  <div key={jc.id} className="flex items-center justify-between rounded border border-line bg-background p-3">
+                    <div>
+                      <span className="font-mono text-xs text-ink">{jc.job_card_code}</span>
+                      <span className="ml-3 font-mono text-[10px] text-diag">[{jc.status.toUpperCase()}]</span>
+                    </div>
+                    <Link
+                      href={`/track/jobcard/${jc.job_card_code}`}
+                      className="font-mono text-xs text-diag underline hover:text-diag/80"
+                    >
+                      VIEW SERVICE REPORT →
+                    </Link>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getBlogPost, APIError, type BlogPost } from '@/lib/api';
+import { getBlogPost, recordTelemetry, APIError, type BlogPost } from '@/lib/api';
 
 interface ArticlePageProps {
   params: {
@@ -12,6 +12,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   let post: BlogPost | null = null;
   try {
     post = await getBlogPost(params.slug);
+    recordTelemetry({
+      event_type: 'blog_view',
+      target_type: 'blog_post',
+      target_id: params.slug,
+    }).catch(() => {});
   } catch (err) {
     if (err instanceof APIError && err.status === 404) {
       notFound();

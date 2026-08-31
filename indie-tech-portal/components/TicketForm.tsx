@@ -11,6 +11,11 @@ const PRIORITIES: { value: CreateTicketInput['priority']; label: string }[] = [
   { value: 'emergency', label: 'Emergency — need someone now' },
 ];
 
+const MAINTENANCE_TYPES: { value: CreateTicketInput['maintenance_type']; label: string; desc: string }[] = [
+  { value: 'corrective', label: 'Corrective Maintenance', desc: 'Fix an active fault, broken hardware, or system failure' },
+  { value: 'preventive', label: 'Preventive Maintenance', desc: 'Routine servicing, cleaning, inspection & health check' },
+];
+
 type FieldErrors = Partial<Record<keyof CreateTicketInput, string>>;
 
 export function TicketForm() {
@@ -22,8 +27,10 @@ export function TicketForm() {
     device_type: '',
     brand: '',
     model: '',
+    serial_number: '',
     issue_desc: '',
     priority: 'normal',
+    maintenance_type: 'corrective',
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -71,6 +78,30 @@ export function TicketForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      <fieldset>
+        <legend className="mb-3 font-mono text-xs tracking-wider text-inkMuted">SERVICE TYPE</legend>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {MAINTENANCE_TYPES.map((m) => (
+            <label
+              key={m.value}
+              className="flex cursor-pointer flex-col rounded border border-line p-4 has-[:checked]:border-diag has-[:checked]:bg-diag/5"
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="maintenance_type"
+                  checked={form.maintenance_type === m.value}
+                  onChange={() => update('maintenance_type', m.value)}
+                  className="accent-diag"
+                />
+                <span className="font-mono text-sm text-ink">{m.label}</span>
+              </div>
+              <span className="mt-1 text-xs text-inkMuted pl-5">{m.desc}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Field label="Your name" optional>
           <input
@@ -104,7 +135,7 @@ export function TicketForm() {
         />
       </Field>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Device type" error={errors.device_type}>
           <select
             value={form.device_type}
@@ -140,14 +171,24 @@ export function TicketForm() {
             placeholder="TASKalfa 3212i"
           />
         </Field>
+
+        <Field label="Serial Number / Asset Tag" optional>
+          <input
+            type="text"
+            value={form.serial_number}
+            onChange={(e) => update('serial_number', e.target.value)}
+            className="input"
+            placeholder="SN-98765432"
+          />
+        </Field>
       </div>
 
-      <Field label="What's wrong?" error={errors.issue_desc}>
+      <Field label="What's wrong / Service scope?" error={errors.issue_desc}>
         <textarea
           value={form.issue_desc}
           onChange={(e) => update('issue_desc', e.target.value)}
           className="input min-h-28 resize-y"
-          placeholder="e.g. Thermal printer not powering on since yesterday's power surge"
+          placeholder="e.g. Thermal printer not powering on since yesterday's power surge or request monthly maintenance check"
           aria-invalid={!!errors.issue_desc}
         />
       </Field>

@@ -15,6 +15,9 @@ type Handlers struct {
 	Package       *handlers.PackageHandler
 	Part          *handlers.PartHandler
 	Blog          *handlers.BlogHandler
+	Telemetry     *handlers.TelemetryHandler
+	Inventory     *handlers.InventoryHandler
+	JobCard       *handlers.JobCardHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
 	Supabase      *supa.Client
 }
@@ -39,6 +42,14 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	api.GET("/blog", h.Blog.List)
 	api.GET("/blog/:slug", h.Blog.GetBySlug)
 
+	// --- Public: telemetry recording ---
+	api.POST("/telemetry", h.Telemetry.Record)
+	api.GET("/telemetry/stats", h.Telemetry.GetStats)
+
+	// --- Public: job card lookup ---
+	api.GET("/jobcards/:code", h.JobCard.GetByCode)
+	api.GET("/jobcards/ticket/:ticket_id", h.JobCard.GetByTicket)
+
 	// --- M-Pesa webhook: must stay unauthenticated (Safaricom calls this directly) ---
 	api.POST("/mpesa/callback", h.MpesaCallback.HandleCallback)
 
@@ -46,4 +57,10 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	admin := api.Group("/admin", custommw.RequireAuth(cfg.JWTSecret))
 	admin.GET("/tickets", h.Ticket.List)
 	admin.PATCH("/tickets/:id/status", h.Ticket.UpdateStatus)
+
+	admin.POST("/inventory/serialized", h.Inventory.AddSerializedItem)
+	admin.POST("/inventory/recall", h.Inventory.TriggerRecall)
+	admin.GET("/inventory/serialized", h.Inventory.ListSerializedItems)
+
+	admin.POST("/jobcards", h.JobCard.Create)
 }

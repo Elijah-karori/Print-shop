@@ -22,19 +22,19 @@ func NewTicketHandler(db *pgxpool.Pool, n notify.Notifier) *TicketHandler {
 }
 
 type createTicketRequest struct {
-	ClientPhone  string  `json:"client_phone" validate:"required"`
-	ClientName   string  `json:"client_name"`
-	BusinessType string  `json:"business_type"`
-	DeviceType   string  `json:"device_type" validate:"required"`
-	Brand        string  `json:"brand"`
-	Model        string  `json:"model"`
-	IssueDesc    string  `json:"issue_desc" validate:"required"`
-	Priority     string  `json:"priority"` // low|normal|high|emergency
+	ClientPhone     string `json:"client_phone" validate:"required"`
+	ClientName      string `json:"client_name"`
+	BusinessType    string `json:"business_type"`
+	DeviceType      string `json:"device_type" validate:"required"`
+	Brand           string `json:"brand"`
+	Model           string `json:"model"`
+	SerialNumber    string `json:"serial_number"`
+	IssueDesc       string `json:"issue_desc" validate:"required"`
+	Priority        string `json:"priority"`         // low|normal|high|emergency
+	MaintenanceType string `json:"maintenance_type"` // preventive|corrective
 }
 
 // Create handles POST /api/v1/tickets — the public-facing "book a ticket" endpoint.
-// It upserts the client by phone number so returning customers don't need an account,
-// creates the device + ticket, and fires the "Ticket Received" WhatsApp notification.
 func (h *TicketHandler) Create(c echo.Context) error {
 	var req createTicketRequest
 	if err := c.Bind(&req); err != nil {
@@ -46,6 +46,11 @@ func (h *TicketHandler) Create(c echo.Context) error {
 	priority := req.Priority
 	if priority == "" {
 		priority = string(models.PriorityNormal)
+	}
+
+	mType := req.MaintenanceType
+	if mType != string(models.MaintenancePreventive) && mType != string(models.MaintenanceCorrective) {
+		mType = string(models.MaintenanceCorrective)
 	}
 
 	ctx := c.Request().Context()
@@ -67,13 +72,13 @@ func (h *TicketHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "could not save client")
 	}
 
-	// Create device record.
+	// Create device record (machine management).
 	var deviceID uuid.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO devices (client_id, device_type, brand, model)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO devices (client_id, device_type, brand, model, serial_number)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
-	`, clientID, req.DeviceType, req.Brand, req.Model).Scan(&deviceID)
+	`, clientID, req.DeviceType, req.Brand, req.Model, req.SerialNumber).Scan(&deviceID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "could not save device")
 	}
@@ -85,12 +90,12 @@ func (h *TicketHandler) Create(c echo.Context) error {
 
 	var ticket models.Ticket
 	err = tx.QueryRow(ctx, `
-		INSERT INTO tickets (ticket_code, client_id, device_id, issue_desc, priority, status)
-		VALUES ($1, $2, $3, $4, $5, 'received')
-		RETURNING id, ticket_code, client_id, device_id, issue_desc, priority, status, created_at, updated_at
-	`, code, clientID, deviceID, req.IssueDesc, priority).Scan(
+		INSERT INTO tickets (ticket_code, client_id, device_id, issue_desc, priority, maintenance_type, status)
+		VALUES ($1, $2, $3, $4, $5, $6, 'received')
+		RETURNING id, ticket_code, client_id, device_id, issue_desc, priority, maintenance_type, status, created_at, updated_at
+	`, code, clientID, deviceID, req.IssueDesc, priority, mType).Scan(
 		&ticket.ID, &ticket.TicketCode, &ticket.ClientID, &ticket.DeviceID,
-		&ticket.IssueDesc, &ticket.Priority, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt,
+		&ticket.IssueDesc, &ticket.Priority, &ticket.MaintenanceType, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt,
 	)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "could not create ticket")
@@ -113,7 +118,6 @@ func (h *TicketHandler) Create(c echo.Context) error {
 }
 
 // Lookup handles GET /api/v1/tickets/lookup?code=TKT-XXXXX&phone=2547...
-// This is the no-auth public status check clients use from the "Track status live" link.
 func (h *TicketHandler) Lookup(c echo.Context) error {
 	code := c.QueryParam("code")
 	phone := c.QueryParam("phone")
@@ -124,14 +128,14 @@ func (h *TicketHandler) Lookup(c echo.Context) error {
 	ctx := c.Request().Context()
 	var ticket models.Ticket
 	err := h.DB.QueryRow(ctx, `
-		SELECT t.id, t.ticket_code, t.client_id, t.device_id, t.issue_desc, t.priority,
+		SELECT t.id, t.ticket_code, t.client_id, t.device_id, t.issue_desc, t.priority, t.maintenance_type,
 		       t.status, t.scheduled_at, t.resolved_at, t.created_at, t.updated_at
 		FROM tickets t
 		JOIN clients c ON c.id = t.client_id
 		WHERE t.ticket_code = $1 AND c.phone = $2
 	`, code, phone).Scan(
 		&ticket.ID, &ticket.TicketCode, &ticket.ClientID, &ticket.DeviceID, &ticket.IssueDesc,
-		&ticket.Priority, &ticket.Status, &ticket.ScheduledAt, &ticket.ResolvedAt,
+		&ticket.Priority, &ticket.MaintenanceType, &ticket.Status, &ticket.ScheduledAt, &ticket.ResolvedAt,
 		&ticket.CreatedAt, &ticket.UpdatedAt,
 	)
 	if err != nil {
@@ -142,13 +146,12 @@ func (h *TicketHandler) Lookup(c echo.Context) error {
 }
 
 // List handles GET /api/v1/admin/tickets — technician-facing dashboard list.
-// Protected by auth middleware (see internal/middleware).
 func (h *TicketHandler) List(c echo.Context) error {
 	ctx := c.Request().Context()
 	statusFilter := c.QueryParam("status")
 
 	query := `
-		SELECT t.id, t.ticket_code, t.client_id, t.device_id, t.issue_desc, t.priority,
+		SELECT t.id, t.ticket_code, t.client_id, t.device_id, t.issue_desc, t.priority, t.maintenance_type,
 		       t.status, t.scheduled_at, t.resolved_at, t.created_at, t.updated_at
 		FROM tickets t
 		WHERE ($1 = '' OR t.status = $1::ticket_status)
@@ -166,7 +169,7 @@ func (h *TicketHandler) List(c echo.Context) error {
 		var t models.Ticket
 		if err := rows.Scan(
 			&t.ID, &t.TicketCode, &t.ClientID, &t.DeviceID, &t.IssueDesc,
-			&t.Priority, &t.Status, &t.ScheduledAt, &t.ResolvedAt, &t.CreatedAt, &t.UpdatedAt,
+			&t.Priority, &t.MaintenanceType, &t.Status, &t.ScheduledAt, &t.ResolvedAt, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "scan error")
 		}
@@ -181,9 +184,6 @@ type updateStatusRequest struct {
 	Note   string `json:"note"`
 }
 
-// UpdateStatus handles PATCH /api/v1/admin/tickets/:id/status — the technician
-// (you) moves a ticket through received -> dispatched -> in_progress -> resolved.
-// Each transition logs a ticket_event and fires a WhatsApp status update.
 func (h *TicketHandler) UpdateStatus(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

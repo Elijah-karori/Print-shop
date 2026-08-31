@@ -13,6 +13,8 @@ export type TicketStatus =
   | 'resolved'
   | 'cancelled';
 
+export type MaintenanceType = 'preventive' | 'corrective';
+
 export interface Ticket {
   id: string;
   ticket_code: string;
@@ -20,6 +22,7 @@ export interface Ticket {
   device_id?: string;
   issue_desc: string;
   priority: 'low' | 'normal' | 'high' | 'emergency';
+  maintenance_type: MaintenanceType;
   status: TicketStatus;
   scheduled_at?: string;
   resolved_at?: string;
@@ -34,8 +37,10 @@ export interface CreateTicketInput {
   device_type: string;
   brand?: string;
   model?: string;
+  serial_number?: string;
   issue_desc: string;
   priority?: 'low' | 'normal' | 'high' | 'emergency';
+  maintenance_type?: MaintenanceType;
 }
 
 export interface ServicePackage {
@@ -69,6 +74,28 @@ export interface BlogPost {
   published_at?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface JobCard {
+  id: string;
+  job_card_code: string;
+  ticket_id: string;
+  device_id?: string;
+  technician_name?: string;
+  work_done?: string;
+  parts_used?: string[];
+  status: 'opened' | 'in_progress' | 'awaiting_parts' | 'completed' | 'signed_off';
+  service_report?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecordTelemetryInput {
+  event_type: 'click' | 'purchase' | 'recall' | 'blog_view';
+  target_type: 'part' | 'package' | 'blog_post';
+  target_id: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CheckoutInput {
@@ -120,7 +147,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       const body = await res.json();
       if (body?.message) message = body.message;
     } catch {
-      // response wasn't JSON — keep the generic message
+      // response wasn't JSON — keep generic message
     }
     throw new APIError(message, res.status);
   }
@@ -151,7 +178,7 @@ export async function listPackages(): Promise<ServicePackage[]> {
         return data as ServicePackage[];
       }
     } catch {
-      // Fallback to API base if Supabase request fails
+      // Fallback
     }
   }
   return request<ServicePackage[]>('/api/v1/packages');
@@ -168,7 +195,7 @@ export async function listParts(): Promise<Part[]> {
         return data as Part[];
       }
     } catch {
-      // Fallback to API base if Supabase request fails
+      // Fallback
     }
   }
   return request<Part[]>('/api/v1/parts');
@@ -186,7 +213,7 @@ export async function listBlogPosts(): Promise<BlogPost[]> {
         return data as BlogPost[];
       }
     } catch {
-      // Fallback to API base if Supabase request fails
+      // Fallback
     }
   }
   return request<BlogPost[]>('/api/v1/blog');
@@ -204,10 +231,25 @@ export async function getBlogPost(slug: string): Promise<BlogPost> {
         return data as BlogPost;
       }
     } catch {
-      // Fallback to API base if Supabase request fails
+      // Fallback
     }
   }
   return request<BlogPost>(`/api/v1/blog/${slug}`);
+}
+
+export function recordTelemetry(input: RecordTelemetryInput): Promise<{ status: string }> {
+  return request<{ status: string }>('/api/v1/telemetry', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getJobCard(code: string): Promise<JobCard> {
+  return request<JobCard>(`/api/v1/jobcards/${code}`);
+}
+
+export function getJobCardsByTicket(ticketId: string): Promise<JobCard[]> {
+  return request<JobCard[]>(`/api/v1/jobcards/ticket/${ticketId}`);
 }
 
 export function checkout(input: CheckoutInput): Promise<CheckoutResponse> {

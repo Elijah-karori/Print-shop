@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { listPackages, listParts, type ServicePackage, type Part } from '@/lib/api';
+import { listPackages, listParts, recordTelemetry, type ServicePackage, type Part } from '@/lib/api';
 
 const CADENCE_LABEL: Record<ServicePackage['cadence'], string> = {
   one_time: 'ONE-TIME',
@@ -49,6 +49,8 @@ export default async function ShopPage() {
           {packages.map((pkg) => (
             <ProductCard
               key={pkg.id}
+              id={pkg.id}
+              targetType="package"
               name={pkg.name}
               blurb={pkg.description}
               priceLabel={`KES ${pkg.price_kes.toLocaleString()}`}
@@ -73,6 +75,8 @@ export default async function ShopPage() {
           {parts.map((part) => (
             <ProductCard
               key={part.id}
+              id={part.id}
+              targetType="part"
               name={part.name}
               blurb={part.description}
               priceLabel={`KES ${part.price_kes.toLocaleString()}`}
@@ -87,12 +91,16 @@ export default async function ShopPage() {
 }
 
 function ProductCard({
+  id,
+  targetType,
   name,
   blurb,
   priceLabel,
   tag,
   href,
 }: {
+  id: string;
+  targetType: 'part' | 'package';
   name: string;
   blurb?: string;
   priceLabel: string;
