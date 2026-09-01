@@ -37,6 +37,7 @@ func main() {
 		Telemetry:     handlers.NewTelemetryHandler(pool),
 		Inventory:     handlers.NewInventoryHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),
+		Search:        handlers.NewSearchHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
 	}
 

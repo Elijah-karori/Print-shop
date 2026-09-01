@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Indie Tech Services — Repair Tickets & Guides',
-  description: 'Book a repair, track your ticket, buy parts, and read service guides.',
+  description: 'Book a repair, track your ticket, buy parts, search documentation and read service guides.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/blog" className="hover:text-diag transition-colors">
                 BLOG &amp; GUIDES
+              </Link>
+              <Link href="/search" className="hover:text-diag transition-colors">
+                SEARCH
               </Link>
             </nav>
           </div>

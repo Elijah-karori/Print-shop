@@ -17,6 +17,7 @@ type Handlers struct {
 	Telemetry     *handlers.TelemetryHandler
 	Inventory     *handlers.InventoryHandler
 	JobCard       *handlers.JobCardHandler
+	Search        *handlers.SearchHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
 }
 
@@ -39,6 +40,9 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	// --- Public: blog & service guides ---
 	api.GET("/blog", h.Blog.List)
 	api.GET("/blog/:slug", h.Blog.GetBySlug)
+
+	// --- Public: search engine (parts, machines, manuals, job cards) ---
+	api.GET("/search", h.Search.Search)
 
 	// --- Public: telemetry recording ---
 	api.POST("/telemetry", h.Telemetry.Record)
