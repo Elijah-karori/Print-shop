@@ -13,7 +13,6 @@ import (
 	"github.com/elijah-karori/indie-tech-api/internal/mpesa"
 	"github.com/elijah-karori/indie-tech-api/internal/notify"
 	"github.com/elijah-karori/indie-tech-api/internal/routes"
-	"github.com/elijah-karori/indie-tech-api/internal/supabase"
 )
 
 func main() {
@@ -25,11 +24,6 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
-
-	supabaseClient := supabase.NewClient(cfg)
-	if supabaseClient != nil {
-		log.Println("Supabase client initialized successfully")
-	}
 
 	mpesaClient := mpesa.NewClient(cfg)
 	whatsapp := notify.NewWhatsAppNotifier(cfg)
@@ -44,13 +38,12 @@ func main() {
 		Inventory:     handlers.NewInventoryHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
-		Supabase:      supabaseClient,
 	}
 
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS()) // tighten AllowOrigins before production launch
+	e.Use(middleware.CORS())
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
