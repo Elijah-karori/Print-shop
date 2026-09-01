@@ -1,11 +1,3 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-export const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
-
 export type TicketStatus =
   | 'received'
   | 'dispatched'
@@ -167,73 +159,19 @@ export function lookupTicket(code: string, phone: string): Promise<Ticket> {
   return request<Ticket>(`/api/v1/tickets/lookup?${params.toString()}`);
 }
 
-export async function listPackages(): Promise<ServicePackage[]> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('service_packages')
-        .select('*')
-        .eq('active', true);
-      if (!error && data) {
-        return data as ServicePackage[];
-      }
-    } catch {
-      // Fallback
-    }
-  }
+export function listPackages(): Promise<ServicePackage[]> {
   return request<ServicePackage[]>('/api/v1/packages');
 }
 
-export async function listParts(): Promise<Part[]> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('parts')
-        .select('*')
-        .eq('active', true);
-      if (!error && data) {
-        return data as Part[];
-      }
-    } catch {
-      // Fallback
-    }
-  }
+export function listParts(): Promise<Part[]> {
   return request<Part[]>('/api/v1/parts');
 }
 
-export async function listBlogPosts(): Promise<BlogPost[]> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .not('published_at', 'is', null)
-        .order('published_at', { ascending: false });
-      if (!error && data) {
-        return data as BlogPost[];
-      }
-    } catch {
-      // Fallback
-    }
-  }
+export function listBlogPosts(): Promise<BlogPost[]> {
   return request<BlogPost[]>('/api/v1/blog');
 }
 
-export async function getBlogPost(slug: string): Promise<BlogPost> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-      if (!error && data) {
-        return data as BlogPost;
-      }
-    } catch {
-      // Fallback
-    }
-  }
+export function getBlogPost(slug: string): Promise<BlogPost> {
   return request<BlogPost>(`/api/v1/blog/${slug}`);
 }
 
