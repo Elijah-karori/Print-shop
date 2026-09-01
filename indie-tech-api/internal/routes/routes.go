@@ -17,6 +17,8 @@ type Handlers struct {
 	Telemetry     *handlers.TelemetryHandler
 	Inventory     *handlers.InventoryHandler
 	JobCard       *handlers.JobCardHandler
+	Search        *handlers.SearchHandler
+	Reliability   *handlers.ReliabilityHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
 }
 
@@ -40,9 +42,14 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	api.GET("/blog", h.Blog.List)
 	api.GET("/blog/:slug", h.Blog.GetBySlug)
 
-	// --- Public: telemetry recording ---
+	// --- Public: search engine ---
+	api.GET("/search", h.Search.Search)
+
+	// --- Public: telemetry & analytics metrics ---
 	api.POST("/telemetry", h.Telemetry.Record)
 	api.GET("/telemetry/stats", h.Telemetry.GetStats)
+	api.GET("/analytics/mtbf", h.Reliability.GetMTBFByModel)
+	api.GET("/analytics/suppliers", h.Reliability.GetSupplierFailureRates)
 
 	// --- Public: job card lookup ---
 	api.GET("/jobcards/:code", h.JobCard.GetByCode)
@@ -61,4 +68,5 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	admin.GET("/inventory/serialized", h.Inventory.ListSerializedItems)
 
 	admin.POST("/jobcards", h.JobCard.Create)
+	admin.POST("/failures", h.Reliability.RecordFailure)
 }

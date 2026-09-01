@@ -83,6 +83,36 @@ export interface JobCard {
   updated_at: string;
 }
 
+export interface MTBFMetric {
+  brand: string;
+  model: string;
+  total_failures: number;
+  avg_operating_hours_failure: number;
+  mtbf_hours: number;
+}
+
+export interface SupplierFailureMetric {
+  supplier_id: string;
+  supplier_name: string;
+  total_units_received: number;
+  total_failed_units: number;
+  failure_rate_percentage: number;
+}
+
+export interface SearchResultItem {
+  category: 'part' | 'machine' | 'job_card' | 'documentation' | 'serialized_item';
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  url?: string;
+}
+
+export interface SearchResponse {
+  query: string;
+  results: SearchResultItem[];
+}
+
 export interface RecordTelemetryInput {
   event_type: 'click' | 'purchase' | 'recall' | 'blog_view';
   target_type: 'part' | 'package' | 'blog_post';
@@ -173,6 +203,19 @@ export function listBlogPosts(): Promise<BlogPost[]> {
 
 export function getBlogPost(slug: string): Promise<BlogPost> {
   return request<BlogPost>(`/api/v1/blog/${slug}`);
+}
+
+export function searchSystem(query: string): Promise<SearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  return request<SearchResponse>(`/api/v1/search?${params.toString()}`);
+}
+
+export function getMTBFMetrics(): Promise<MTBFMetric[]> {
+  return request<MTBFMetric[]>('/api/v1/analytics/mtbf');
+}
+
+export function getSupplierFailureMetrics(): Promise<SupplierFailureMetric[]> {
+  return request<SupplierFailureMetric[]>('/api/v1/analytics/suppliers');
 }
 
 export function recordTelemetry(input: RecordTelemetryInput): Promise<{ status: string }> {
