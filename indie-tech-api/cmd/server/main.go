@@ -38,6 +38,7 @@ func main() {
 		Inventory:     handlers.NewInventoryHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),
 		Search:        handlers.NewSearchHandler(pool),
+		Reliability:   handlers.NewReliabilityHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
 	}
 

@@ -125,6 +125,73 @@ type SerializedItem struct {
 	UpdatedAt    time.Time            `json:"updated_at"`
 }
 
+type Supplier struct {
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	ContactPhone string    `json:"contact_phone,omitempty"`
+	ContactEmail string    `json:"contact_email,omitempty"`
+	Rating       float64   `json:"rating"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type ItemUnit struct {
+	ID           uuid.UUID `json:"id"`
+	PartID       uuid.UUID `json:"part_id"`
+	ReceiptID    *uuid.UUID `json:"receipt_id,omitempty"`
+	SerialNumber string    `json:"serial_number"`
+	UnitCostKES  float64   `json:"unit_cost_kes"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type MachineComponent struct {
+	ID          uuid.UUID  `json:"id"`
+	DeviceID    uuid.UUID  `json:"device_id"`
+	ItemUnitID  uuid.UUID  `json:"item_unit_id"`
+	InstalledAt time.Time  `json:"installed_at"`
+	RemovedAt   *time.Time `json:"removed_at,omitempty"`
+	Active      bool       `json:"active"`
+}
+
+type Deployment struct {
+	ID         uuid.UUID  `json:"id"`
+	ItemUnitID uuid.UUID  `json:"item_unit_id"`
+	ClientID   *uuid.UUID `json:"client_id,omitempty"`
+	AssignedTo string     `json:"assigned_to,omitempty"`
+	DeployedAt time.Time  `json:"deployed_at"`
+	ReturnedAt *time.Time `json:"returned_at,omitempty"`
+	Status     string     `json:"status"`
+}
+
+type FailureEvent struct {
+	ID                uuid.UUID  `json:"id"`
+	DeviceID          uuid.UUID  `json:"device_id"`
+	FailedUnitID      uuid.UUID  `json:"failed_unit_id"`
+	ReplacementUnitID *uuid.UUID `json:"replacement_unit_id,omitempty"`
+	TicketID          *uuid.UUID `json:"ticket_id,omitempty"`
+	FailureReason     string     `json:"failure_reason"`
+	OperatingHours    int        `json:"operating_hours"`
+	OccurredAt        time.Time  `json:"occurred_at"`
+	CreatedAt         time.Time  `json:"created_at"`
+}
+
+type MTBFByModel struct {
+	Brand                    string  `json:"brand"`
+	Model                    string  `json:"model"`
+	TotalFailures            int     `json:"total_failures"`
+	AvgOperatingHoursFailure float64 `json:"avg_operating_hours_failure"`
+	MTBFHours                float64 `json:"mtbf_hours"`
+}
+
+type SupplierFailureRate struct {
+	SupplierID            uuid.UUID `json:"supplier_id"`
+	SupplierName          string    `json:"supplier_name"`
+	TotalUnitsReceived    int       `json:"total_units_received"`
+	TotalFailedUnits      int       `json:"total_failed_units"`
+	FailureRatePercentage float64   `json:"failure_rate_percentage"`
+}
+
 type TelemetryEvent struct {
 	ID         uuid.UUID              `json:"id"`
 	EventType  string                 `json:"event_type"` // 'click' | 'purchase' | 'recall' | 'blog_view'
