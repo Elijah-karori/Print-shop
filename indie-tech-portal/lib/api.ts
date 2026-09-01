@@ -57,6 +57,36 @@ export interface Part {
   updated_at: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_phone?: string;
+  contact_email?: string;
+  rating: number;
+  created_at: string;
+}
+
+export interface ItemUnit {
+  id: string;
+  part_id: string;
+  receipt_id?: string;
+  serial_number: string;
+  unit_cost_kes: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Deployment {
+  id: string;
+  item_unit_id: string;
+  client_id?: string;
+  assigned_to: string;
+  deployed_at: string;
+  returned_at?: string;
+  status: string;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -195,6 +225,18 @@ export function listPackages(): Promise<ServicePackage[]> {
 
 export function listParts(): Promise<Part[]> {
   return request<Part[]>('/api/v1/parts');
+}
+
+export function listItemUnits(): Promise<ItemUnit[]> {
+  return request<ItemUnit[]>('/api/v1/admin/inventory/units');
+}
+
+export function listSuppliers(): Promise<Supplier[]> {
+  return request<Supplier[]>('/api/v1/admin/procurement/suppliers');
+}
+
+export function listDeployments(): Promise<Deployment[]> {
+  return request<Deployment[]>('/api/v1/admin/deployments');
 }
 
 export function listBlogPosts(): Promise<BlogPost[]> {

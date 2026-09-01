@@ -3,8 +3,8 @@ import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Indie Tech Services — Repair Tickets & Reliability Analytics',
-  description: 'Book a repair, track your ticket, buy parts, search documentation and view reliability metrics.',
+  title: 'Indie Tech Services — Repair Tickets & Inventory Engine',
+  description: 'Book a repair, track your ticket, buy parts, search documentation and manage inventory deployments.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/shop" className="hover:text-diag transition-colors">
                 SHOP
+              </Link>
+              <Link href="/inventory" className="hover:text-diag transition-colors">
+                INVENTORY
               </Link>
               <Link href="/blog" className="hover:text-diag transition-colors">
                 BLOG &amp; GUIDES
