@@ -1,23 +1,25 @@
-import { listItemUnits, listSuppliers, listDeployments, type ItemUnit, type Supplier, type Deployment } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { listItemUnits, listSuppliers, listDeployments, type ItemUnit, type Supplier, type Deployment } from '../lib/api';
 
-export default async function InventoryPage() {
-  let units: ItemUnit[] = [];
-  let suppliers: Supplier[] = [];
-  let deployments: Deployment[] = [];
-  let error = false;
+export function Inventory() {
+  const [units, setUnits] = useState<ItemUnit[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [error, setError] = useState(false);
 
-  try {
-    const [u, s, d] = await Promise.all([
+  useEffect(() => {
+    Promise.all([
       listItemUnits().catch(() => []),
       listSuppliers().catch(() => []),
       listDeployments().catch(() => []),
-    ]);
-    units = u;
-    suppliers = s;
-    deployments = d;
-  } catch {
-    error = true;
-  }
+    ])
+      .then(([u, s, d]) => {
+        setUnits(u);
+        setSuppliers(s);
+        setDeployments(d);
+      })
+      .catch(() => setError(true));
+  }, []);
 
   return (
     <div className="space-y-12">

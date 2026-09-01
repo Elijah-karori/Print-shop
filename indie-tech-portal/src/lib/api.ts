@@ -174,7 +174,7 @@ export interface OrderStatusResponse {
   mpesa_receipt?: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080';
 
 class APIError extends Error {
   status: number;

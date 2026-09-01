@@ -1,5 +1,6 @@
-import Link from 'next/link';
-import { listPackages, listParts, recordTelemetry, type ServicePackage, type Part } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { listPackages, listParts, type ServicePackage, type Part } from '../lib/api';
 
 const CADENCE_LABEL: Record<ServicePackage['cadence'], string> = {
   one_time: 'ONE-TIME',
@@ -8,22 +9,20 @@ const CADENCE_LABEL: Record<ServicePackage['cadence'], string> = {
   annual: 'ANNUAL',
 };
 
-export default async function ShopPage() {
-  let packages: ServicePackage[] = [];
-  let packagesError = false;
-  try {
-    packages = await listPackages();
-  } catch {
-    packagesError = true;
-  }
+export function Shop() {
+  const [packages, setPackages] = useState<ServicePackage[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [packagesError, setPackagesError] = useState(false);
+  const [partsError, setPartsError] = useState(false);
 
-  let parts: Part[] = [];
-  let partsError = false;
-  try {
-    parts = await listParts();
-  } catch {
-    partsError = true;
-  }
+  useEffect(() => {
+    listPackages()
+      .then(setPackages)
+      .catch(() => setPackagesError(true));
+    listParts()
+      .then(setParts)
+      .catch(() => setPartsError(true));
+  }, []);
 
   return (
     <div className="space-y-14">
@@ -49,13 +48,11 @@ export default async function ShopPage() {
           {packages.map((pkg) => (
             <ProductCard
               key={pkg.id}
-              id={pkg.id}
-              targetType="package"
               name={pkg.name}
               blurb={pkg.description}
               priceLabel={`KES ${pkg.price_kes.toLocaleString()}`}
               tag={CADENCE_LABEL[pkg.cadence]}
-              href={`/shop/checkout?type=service_package&ref=${pkg.id}&desc=${encodeURIComponent(pkg.name)}&amount=${pkg.price_kes}`}
+              to={`/shop/checkout?type=service_package&ref=${pkg.id}&desc=${encodeURIComponent(pkg.name)}&amount=${pkg.price_kes}`}
             />
           ))}
         </div>
@@ -75,13 +72,11 @@ export default async function ShopPage() {
           {parts.map((part) => (
             <ProductCard
               key={part.id}
-              id={part.id}
-              targetType="part"
               name={part.name}
               blurb={part.description}
               priceLabel={`KES ${part.price_kes.toLocaleString()}`}
               tag={part.stock_qty <= 2 ? `${part.stock_qty} LEFT` : undefined}
-              href={`/shop/checkout?type=spare_part&ref=${part.id}&desc=${encodeURIComponent(part.name)}&amount=${part.price_kes}`}
+              to={`/shop/checkout?type=spare_part&ref=${part.id}&desc=${encodeURIComponent(part.name)}&amount=${part.price_kes}`}
             />
           ))}
         </div>
@@ -91,21 +86,17 @@ export default async function ShopPage() {
 }
 
 function ProductCard({
-  id,
-  targetType,
   name,
   blurb,
   priceLabel,
   tag,
-  href,
+  to,
 }: {
-  id: string;
-  targetType: 'part' | 'package';
   name: string;
   blurb?: string;
   priceLabel: string;
   tag?: string;
-  href: string;
+  to: string;
 }) {
   return (
     <div className="flex flex-col justify-between rounded border border-line bg-surface p-5">
@@ -123,7 +114,7 @@ function ProductCard({
       <div className="mt-5 flex items-center justify-between">
         <span className="font-mono text-sm text-diag">{priceLabel}</span>
         <Link
-          href={href}
+          to={to}
           className="rounded border border-diag bg-diag/10 px-3 py-1.5 font-mono text-xs text-diag transition-colors hover:bg-diag/20"
         >
           BUY →

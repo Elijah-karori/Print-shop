@@ -1,31 +1,39 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { getJobCard, APIError, type JobCard } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { getJobCard, type JobCard } from '../lib/api';
 
-interface JobCardPageProps {
-  params: {
-    code: string;
-  };
-}
+export function JobCardView() {
+  const { code } = useParams<{ code: string }>();
+  const [jc, setJc] = useState<JobCard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function JobCardPage({ params }: JobCardPageProps) {
-  let jc: JobCard | null = null;
-  try {
-    jc = await getJobCard(params.code);
-  } catch (err) {
-    if (err instanceof APIError && err.status === 404) {
-      notFound();
+  useEffect(() => {
+    if (code) {
+      getJobCard(code)
+        .then(setJc)
+        .catch(() => setError('Job card not found.'))
+        .finally(() => setLoading(false));
     }
-  }
+  }, [code]);
 
-  if (!jc) {
-    notFound();
+  if (loading) return <p className="text-sm text-inkMuted">Loading job card...</p>;
+
+  if (error || !jc) {
+    return (
+      <div className="space-y-4">
+        <Link to="/track" className="font-mono text-xs tracking-widest text-diag hover:underline">
+          ← BACK TO TICKET LOOKUP
+        </Link>
+        <p className="rounded border border-line bg-surface p-6 text-sm text-inkMuted">Job card not found.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/track" className="font-mono text-xs tracking-widest text-diag hover:underline">
+        <Link to="/track" className="font-mono text-xs tracking-widest text-diag hover:underline">
           ← BACK TO TICKET LOOKUP
         </Link>
         <div className="mt-4 flex items-center justify-between">

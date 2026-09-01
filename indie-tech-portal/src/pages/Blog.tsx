@@ -1,14 +1,16 @@
-import Link from 'next/link';
-import { listBlogPosts, type BlogPost } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { listBlogPosts, type BlogPost } from '../lib/api';
 
-export default async function BlogPage() {
-  let posts: BlogPost[] = [];
-  let error = false;
-  try {
-    posts = await listBlogPosts();
-  } catch {
-    error = true;
-  }
+export function Blog() {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    listBlogPosts()
+      .then(setPosts)
+      .catch(() => setError(true));
+  }, []);
 
   return (
     <div className="space-y-10">
@@ -22,7 +24,7 @@ export default async function BlogPage() {
 
       {error && (
         <p className="rounded border border-line bg-surface px-4 py-3 text-sm text-inkMuted">
-          Couldn&apos;t load articles right now — check that the API or Supabase is accessible.
+          Couldn&apos;t load articles right now — check that the API is running.
         </p>
       )}
 
@@ -45,13 +47,13 @@ export default async function BlogPage() {
                   : 'GUIDE'}
               </span>
               <h2 className="mt-1 font-mono text-lg text-ink hover:text-diag">
-                <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                <Link to={`/blog/${post.slug}`}>{post.title}</Link>
               </h2>
               {post.excerpt && <p className="mt-2 text-sm text-inkMuted">{post.excerpt}</p>}
             </div>
             <div>
               <Link
-                href={`/blog/${post.slug}`}
+                to={`/blog/${post.slug}`}
                 className="inline-block rounded border border-diag bg-diag/10 px-3 py-1.5 font-mono text-xs text-diag transition-colors hover:bg-diag/20"
               >
                 READ GUIDE →

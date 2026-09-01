@@ -1,4 +1,4 @@
-import type { TicketStatus } from '@/lib/api';
+import type { TicketStatus } from '../lib/api';
 
 const STAGES: { key: TicketStatus; label: string }[] = [
   { key: 'received', label: 'RECEIVED' },
@@ -9,12 +9,6 @@ const STAGES: { key: TicketStatus; label: string }[] = [
 
 const STAGE_ORDER: TicketStatus[] = ['received', 'dispatched', 'in_progress', 'resolved'];
 
-/**
- * Horizontal LED-strip status indicator. Each segment is a diagnostic light —
- * lit segments (green) are complete, the current stage pulses, upcoming
- * stages stay dark. Cancelled tickets get a distinct red single-light state
- * instead of following the strip, since cancellation isn't a "stage".
- */
 export function StatusTicker({ status }: { status: TicketStatus }) {
   if (status === 'cancelled') {
     return (

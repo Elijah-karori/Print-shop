@@ -1,9 +1,6 @@
-'use client';
-
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { searchSystem, type SearchResultItem } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { searchSystem, type SearchResultItem } from '../lib/api';
 
 const CATEGORY_LABELS: Record<SearchResultItem['category'], string> = {
   part: 'INVENTORY & SPARE PARTS',
@@ -13,8 +10,8 @@ const CATEGORY_LABELS: Record<SearchResultItem['category'], string> = {
   serialized_item: 'SERIALIZED ITEMS',
 };
 
-function SearchPageInner() {
-  const searchParams = useSearchParams();
+export function SearchPage() {
+  const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +102,7 @@ function SearchPageInner() {
                 </div>
                 {item.url && (
                   <Link
-                    href={item.url}
+                    to={item.url}
                     className="whitespace-nowrap rounded border border-line bg-background px-3 py-1 font-mono text-xs text-ink hover:text-diag hover:border-diag"
                   >
                     VIEW →
@@ -117,7 +114,7 @@ function SearchPageInner() {
         </section>
       ))}
 
-      <style jsx global>{`
+      <style>{`
         .search-input {
           background: #1e2328;
           border: 1px solid #31383e;
@@ -135,13 +132,5 @@ function SearchPageInner() {
         }
       `}</style>
     </div>
-  );
-}
-
-export default function SearchPage() {
-  return (
-    <Suspense fallback={<p className="text-sm text-inkMuted">Loading search...</p>}>
-      <SearchPageInner />
-    </Suspense>
   );
 }

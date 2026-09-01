@@ -1,8 +1,6 @@
-'use client';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createTicket, APIError, type CreateTicketInput } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
+import { createTicket, APIError, type CreateTicketInput } from '../lib/api';
 
 const DEVICE_TYPES = ['Printer', 'POS Terminal', 'Smart Board', 'Network Equipment', 'Other'];
 const PRIORITIES: { value: CreateTicketInput['priority']; label: string }[] = [
@@ -19,7 +17,7 @@ const MAINTENANCE_TYPES: { value: CreateTicketInput['maintenance_type']; label: 
 type FieldErrors = Partial<Record<keyof CreateTicketInput, string>>;
 
 export function TicketForm() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [form, setForm] = useState<CreateTicketInput>({
     client_phone: '',
     client_name: '',
@@ -64,7 +62,7 @@ export function TicketForm() {
         ...form,
         client_phone: form.client_phone.replace(/\s+/g, ''),
       });
-      router.push(`/track?code=${ticket.ticket_code}&phone=${form.client_phone.replace(/\s+/g, '')}`);
+      navigate(`/track?code=${ticket.ticket_code}&phone=${form.client_phone.replace(/\s+/g, '')}`);
     } catch (err) {
       if (err instanceof APIError) {
         setSubmitError(err.message);
@@ -228,7 +226,7 @@ export function TicketForm() {
         {submitting ? 'SUBMITTING...' : 'SUBMIT TICKET →'}
       </button>
 
-      <style jsx global>{`
+      <style>{`
         .input {
           width: 100%;
           background: #1e2328;

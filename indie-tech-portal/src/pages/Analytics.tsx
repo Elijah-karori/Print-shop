@@ -1,17 +1,19 @@
-import { getMTBFMetrics, getSupplierFailureMetrics, type MTBFMetric, type SupplierFailureMetric } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { getMTBFMetrics, getSupplierFailureMetrics, type MTBFMetric, type SupplierFailureMetric } from '../lib/api';
 
-export default async function AnalyticsPage() {
-  let mtbfList: MTBFMetric[] = [];
-  let supplierList: SupplierFailureMetric[] = [];
-  let error = false;
+export function Analytics() {
+  const [mtbfList, setMtbfList] = useState<MTBFMetric[]>([]);
+  const [supplierList, setSupplierList] = useState<SupplierFailureMetric[]>([]);
+  const [error, setError] = useState(false);
 
-  try {
-    const [mList, sList] = await Promise.all([getMTBFMetrics(), getSupplierFailureMetrics()]);
-    mtbfList = mList || [];
-    supplierList = sList || [];
-  } catch {
-    error = true;
-  }
+  useEffect(() => {
+    Promise.all([getMTBFMetrics(), getSupplierFailureMetrics()])
+      .then(([mList, sList]) => {
+        setMtbfList(mList || []);
+        setSupplierList(sList || []);
+      })
+      .catch(() => setError(true));
+  }, []);
 
   return (
     <div className="space-y-12">

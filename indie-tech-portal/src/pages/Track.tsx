@@ -1,13 +1,10 @@
-'use client';
+import { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { lookupTicket, getJobCardsByTicket, APIError, type Ticket, type JobCard } from '../lib/api';
+import { StatusTicker } from '../components/StatusTicker';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { lookupTicket, getJobCardsByTicket, APIError, type Ticket, type JobCard } from '@/lib/api';
-import { StatusTicker } from '@/components/StatusTicker';
-
-function TrackPageInner() {
-  const searchParams = useSearchParams();
+export function Track() {
+  const [searchParams] = useSearchParams();
   const [code, setCode] = useState(searchParams.get('code') ?? '');
   const [phone, setPhone] = useState(searchParams.get('phone') ?? '');
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -40,7 +37,6 @@ function TrackPageInner() {
     }
   }
 
-  // Auto-lookup if arriving with both params pre-filled (e.g. right after booking)
   useEffect(() => {
     if (searchParams.get('code') && searchParams.get('phone')) {
       doLookup(searchParams.get('code')!, searchParams.get('phone')!);
@@ -148,7 +144,7 @@ function TrackPageInner() {
                       <span className="ml-3 font-mono text-[10px] text-diag">[{jc.status.toUpperCase()}]</span>
                     </div>
                     <Link
-                      href={`/track/jobcard/${jc.job_card_code}`}
+                      to={`/track/jobcard/${jc.job_card_code}`}
                       className="font-mono text-xs text-diag underline hover:text-diag/80"
                     >
                       VIEW SERVICE REPORT →
@@ -161,7 +157,7 @@ function TrackPageInner() {
         </div>
       )}
 
-      <style jsx global>{`
+      <style>{`
         .track-input {
           background: #1e2328;
           border: 1px solid #31383e;
@@ -179,13 +175,5 @@ function TrackPageInner() {
         }
       `}</style>
     </div>
-  );
-}
-
-export default function TrackPage() {
-  return (
-    <Suspense fallback={<p className="text-sm text-inkMuted">Loading...</p>}>
-      <TrackPageInner />
-    </Suspense>
   );
 }
