@@ -2,19 +2,22 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
+	"github.com/elijah-karori/indie-tech-api/internal/events"
 	"github.com/elijah-karori/indie-tech-api/internal/models"
 )
 
 type InventoryHandler struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
+	events *events.EventService
 }
 
-func NewInventoryHandler(db *pgxpool.Pool) *InventoryHandler {
-	return &InventoryHandler{db: db}
+func NewInventoryHandler(db *pgxpool.Pool, events *events.EventService) *InventoryHandler {
+	return &InventoryHandler{db: db, events: events}
 }
 
 type AddItemUnitInput struct {
@@ -73,6 +76,17 @@ func (h *InventoryHandler) AddItemUnit(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to commit unit registration"})
 	}
 
+	// Publish NATS event if event service is set
+	if h.events != nil {
+		_ = h.events.PublishItemAdded(ctx, events.ItemAddedPayload{
+			UnitID:       item.ID.String(),
+			PartID:       item.PartID.String(),
+			SerialNumber: item.SerialNumber,
+			UnitCostKES:  item.UnitCostKES,
+			Timestamp:    time.Now(),
+		})
+	}
+
 	return c.JSON(http.StatusCreated, item)
 }
 
@@ -126,6 +140,16 @@ func (h *InventoryHandler) TriggerRecall(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to commit recall"})
 	}
 
+	// Publish NATS event if event service is set
+	if h.events != nil {
+		_ = h.events.PublishItemRecalled(ctx, events.ItemRecalledPayload{
+			UnitID:       unitID.String(),
+			SerialNumber: input.SerialNumber,
+			Reason:       input.RecallReason,
+			Timestamp:    time.Now(),
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{"status": "recalled", "serial_number": input.SerialNumber})
 }
 
@@ -153,4 +177,54 @@ func (h *InventoryHandler) ListItemUnits(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, items)
+}
+
+type StatusCount struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+type InventoryAnalyticsResponse struct {
+	TotalUnits       int           `json:"total_units"`
+	TotalValueKES    float64       `json:"total_value_kes"`
+	StatusBreakdown  []StatusCount `json:"status_breakdown"`
+	RecalledUnits    int           `json:"recalled_units"`
+	InStockUnits     int           `json:"in_stock_units"`
+	DeployedUnits    int           `json:"deployed_units"`
+}
+
+func (h *InventoryHandler) GetAnalytics(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	var resp InventoryAnalyticsResponse
+
+	_ = h.db.QueryRow(ctx, `SELECT COUNT(*), COALESCE(SUM(unit_cost_kes), 0) FROM item_units`).Scan(&resp.TotalUnits, &resp.TotalValueKES)
+
+	rows, err := h.db.Query(ctx, `
+		SELECT status, COUNT(*)
+		FROM item_units
+		GROUP BY status
+	`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var sc StatusCount
+			if err := rows.Scan(&sc.Status, &sc.Count); err == nil {
+				resp.StatusBreakdown = append(resp.StatusBreakdown, sc)
+				switch sc.Status {
+				case "recalled":
+					resp.RecalledUnits = sc.Count
+				case "in_stock":
+					resp.InStockUnits = sc.Count
+				case "installed", "deployed":
+					resp.DeployedUnits += sc.Count
+				}
+			}
+		}
+	}
+	if resp.StatusBreakdown == nil {
+		resp.StatusBreakdown = []StatusCount{}
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
