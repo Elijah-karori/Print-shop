@@ -36,6 +36,8 @@ func main() {
 		Blog:          handlers.NewBlogHandler(pool),
 		Telemetry:     handlers.NewTelemetryHandler(pool),
 		Inventory:     handlers.NewInventoryHandler(pool),
+		Procurement:   handlers.NewProcurementHandler(pool),
+		Deployment:    handlers.NewDeploymentHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),
 		Search:        handlers.NewSearchHandler(pool),
 		Reliability:   handlers.NewReliabilityHandler(pool),

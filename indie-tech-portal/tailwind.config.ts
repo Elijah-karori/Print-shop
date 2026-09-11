@@ -1,36 +1,28 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
   content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       colors: {
-        housing: '#15181B',      // page background — device casing
-        surface: '#1E2328',      // cards, form panels
-        surfaceRaised: '#262C32',
-        line: '#31383E',         // hairline dividers, "circuit trace" borders
-        diag: {
-          DEFAULT: '#3ECF8E',    // diagnostic green — continuity/success
-          dim: '#245C42',
-        },
-        amber: {
-          DEFAULT: '#F2A93B',    // priority / in-progress
-          dim: '#7A5A22',
-        },
-        danger: '#E2554B',
-        ink: '#E8EAED',          // primary text
-        inkMuted: '#8A9199',     // secondary text
-      },
-      fontFamily: {
-        mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
-        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        background: '#161a1d',
+        surface: '#1e2328',
+        line: '#31383e',
+        ink: '#e8eaed',
+        inkMuted: '#9aa0a6',
+        diag: '#3ecf8e',
+        amber: '#f59e0b',
+        danger: '#f87171',
       },
       boxShadow: {
-        led: '0 0 8px 1px currentColor',
+        led: '0 0 8px rgba(62, 207, 142, 0.6)',
       },
     },
   },
   plugins: [],
 };
+
+export default config;

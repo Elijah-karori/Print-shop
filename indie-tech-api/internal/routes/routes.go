@@ -16,6 +16,8 @@ type Handlers struct {
 	Blog          *handlers.BlogHandler
 	Telemetry     *handlers.TelemetryHandler
 	Inventory     *handlers.InventoryHandler
+	Procurement   *handlers.ProcurementHandler
+	Deployment    *handlers.DeploymentHandler
 	JobCard       *handlers.JobCardHandler
 	Search        *handlers.SearchHandler
 	Reliability   *handlers.ReliabilityHandler
@@ -63,9 +65,21 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	admin.GET("/tickets", h.Ticket.List)
 	admin.PATCH("/tickets/:id/status", h.Ticket.UpdateStatus)
 
-	admin.POST("/inventory/serialized", h.Inventory.AddSerializedItem)
+	// --- Inventory & Serialization ---
+	admin.POST("/inventory/unit", h.Inventory.AddItemUnit)
 	admin.POST("/inventory/recall", h.Inventory.TriggerRecall)
-	admin.GET("/inventory/serialized", h.Inventory.ListSerializedItems)
+	admin.GET("/inventory/units", h.Inventory.ListItemUnits)
+
+	// --- Procurement & Receiving ---
+	admin.POST("/procurement/suppliers", h.Procurement.CreateSupplier)
+	admin.GET("/procurement/suppliers", h.Procurement.ListSuppliers)
+	admin.POST("/procurement/po", h.Procurement.CreatePOLine)
+	admin.POST("/procurement/receive", h.Procurement.ProcessReceipt)
+
+	// --- Deployments & Machine Component Nesting ---
+	admin.POST("/deployments/install", h.Deployment.InstallComponent)
+	admin.POST("/deployments", h.Deployment.CreateDeployment)
+	admin.GET("/deployments", h.Deployment.ListDeployments)
 
 	admin.POST("/jobcards", h.JobCard.Create)
 	admin.POST("/failures", h.Reliability.RecordFailure)

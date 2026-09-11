@@ -1,0 +1,16 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  body {
+    background-color: #161a1d;
+    color: #e8eaed;
+  }
+}
+
+.trace-bg {
+  background-color: #161a1d;
+  background-image: radial-gradient(#272c30 1px, transparent 1px);
+  background-size: 24px 24px;
+}

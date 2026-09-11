@@ -9,7 +9,9 @@ An end-to-end e-commerce, preventive/corrective maintenance booking, spare parts
 The system consists of two main applications:
 
 1. **`indie-tech-api`**: High-performance RESTful API written in **Go 1.22 (Echo v4 framework)**, connecting directly to a **PostgreSQL database** via `pgxpool`. Integrates **M-Pesa Daraja API** for payments and **WhatsApp Cloud API** for client notification updates.
-2. **`indie-tech-portal`**: Modern client-facing portal written in **Next.js 14 (TypeScript & Tailwind CSS)**. Supports no-account repair booking, M-Pesa storefront checkout, job card lookup, service report views, and knowledge base articles.
+2. **`indie-tech-portal`**: Modern client-facing portal built with **React.js + Vite (TypeScript & Tailwind CSS)**. Supports no-account repair booking, M-Pesa storefront checkout, job card lookup, service report views, and knowledge base articles.
+
+*For detailed database schema, relationships, foreign keys, and ERD cardinalities, see [`DATABASE.md`](./DATABASE.md).*
 
 ---
 
@@ -30,22 +32,22 @@ The system consists of two main applications:
 - **Device & Machine Tracking**: Auto-provisions customer machines with brand, model, device type, and serial number / asset tag.
 - **Technician Job Cards**: Unique job card generation (`JOB-XXXXX`) tied to repair tickets and customer machines.
 - **Work & Parts Tracking**: Log work performed, technician assigned, parts installed, and resolution status.
-- **Official Service Reports**: Publicly accessible and printable digital service report view for clients.
+- **Official Service Reports**: Publicly accessible digital service report view for clients.
 
-### 4. Inventory Serialization & Recall System
-- **Serialized Item Tracking**: Individual serial number tracking (`serialized_items`) for high-value components.
-- **Inventory Statuses**: `in_stock`, `reserved`, `sold`, `recalled`, `defective`.
+### 4. Unified Inventory Serialization, Procurement & Deployments
+- **Procurement & Receiving**: Purchase order line creation, supplier tracking, and receipt processing spawning serialized `item_units` with locked unit cost (`unit_cost_kes`).
+- **Machine Component Nesting**: Track parts installed inside machines (`machine_components`).
+- **Asset Deployments**: Equipment handoffs to clients or technicians (`deployments`).
+- **Unit Transactions Ledger**: Immutable transactional audit trail (`unit_transactions`).
 - **Product Recall Triggers**: Technician admin API to flag defective batches/serials with recall reasons.
 
-### 5. Telemetry & Analytics
-- **Click & Purchase Telemetry**: Tracks customer interest and buying frequency across spare parts and packages.
-- **Blog Analytics**: Tracks view counts and popularity for diagnostic guides.
-- **Recall Telemetry**: Logs item recall metrics for supplier reporting.
-- **Telemetry Aggregation API**: `GET /api/v1/telemetry/stats` endpoint summarizing top items and article views.
+### 5. PostgreSQL Full-Text Search
+- **System Search Engine**: `pg_trgm` and `tsvector` indexing across spare parts, machine details/serials, job cards, and technical manuals.
 
-### 6. Knowledge Base & Technician Service Guides
-- **Blog & Repair Guides**: Diagnostic procedures (e.g., thermal printer troubleshooting, laser fuser maintenance).
-- **Markdown Rendering**: Articles rendered in structured markdown format.
+### 6. Reliability & MTBF Analytics
+- **Mean Time Between Failures (MTBF)**: Calculated MTBF per machine model via `analytics.mv_mtbf_by_model`.
+- **Supplier Quality Tracking**: Supplier defect and failure rate percentages via `analytics.mv_supplier_failure_rates`.
+- **Telemetry**: Tracking of clicks, purchases, recalls, and article views (`GET /api/v1/telemetry/stats`).
 
 ---
 
@@ -75,6 +77,9 @@ The system consists of two main applications:
    psql -d indietech -f indie-tech-api/internal/db/migrations/0004_seed_parts.sql
    psql -d indietech -f indie-tech-api/internal/db/migrations/0005_seed_blog.sql
    psql -d indietech -f indie-tech-api/internal/db/migrations/0006_advanced_features.sql
+   psql -d indietech -f indie-tech-api/internal/db/migrations/0007_pg_search.sql
+   psql -d indietech -f indie-tech-api/internal/db/migrations/0008_inventory_engine.sql
+   psql -d indietech -f indie-tech-api/internal/db/migrations/0009_consolidate_inventory.sql
    ```
 
 ---
@@ -112,14 +117,14 @@ The system consists of two main applications:
    ```bash
    cp .env.local.example .env.local
    ```
-   Ensure `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`.
+   Ensure `VITE_API_BASE_URL=http://localhost:8080`.
 
 3. Install dependencies:
    ```bash
    npm install
    ```
 
-4. Start the Next.js development server:
+4. Start the React + Vite development server:
    ```bash
    npm run dev
    ```
@@ -136,7 +141,7 @@ go test ./...
 go build ./...
 ```
 
-### Frontend Build:
+### Frontend Production Build:
 ```bash
 cd indie-tech-portal
 npm run build
