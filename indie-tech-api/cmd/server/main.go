@@ -25,6 +25,10 @@ func main() {
 	}
 	defer pool.Close()
 
+	if err := db.RunMigrations(ctx, pool); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+
 	mpesaClient := mpesa.NewClient(cfg)
 	whatsapp := notify.NewWhatsAppNotifier(cfg)
 
