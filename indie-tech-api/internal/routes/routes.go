@@ -69,6 +69,7 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 	admin.POST("/inventory/unit", h.Inventory.AddItemUnit)
 	admin.POST("/inventory/recall", h.Inventory.TriggerRecall)
 	admin.GET("/inventory/units", h.Inventory.ListItemUnits)
+	admin.GET("/inventory/analytics", h.Inventory.GetAnalytics)
 
 	// --- Procurement & Receiving ---
 	admin.POST("/procurement/suppliers", h.Procurement.CreateSupplier)

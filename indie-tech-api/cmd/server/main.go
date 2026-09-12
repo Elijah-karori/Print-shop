@@ -9,6 +9,7 @@ import (
 
 	"github.com/elijah-karori/indie-tech-api/internal/config"
 	"github.com/elijah-karori/indie-tech-api/internal/db"
+	"github.com/elijah-karori/indie-tech-api/internal/events"
 	"github.com/elijah-karori/indie-tech-api/internal/handlers"
 	"github.com/elijah-karori/indie-tech-api/internal/mpesa"
 	"github.com/elijah-karori/indie-tech-api/internal/notify"
@@ -25,6 +26,17 @@ func main() {
 	}
 	defer pool.Close()
 
+	if err := db.RunMigrations(ctx, pool); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+
+	eventSvc, err := events.StartEmbeddedNATS(pool)
+	if err != nil {
+		log.Printf("warning: embedded NATS server start error: %v", err)
+	} else {
+		defer eventSvc.Close()
+	}
+
 	mpesaClient := mpesa.NewClient(cfg)
 	whatsapp := notify.NewWhatsAppNotifier(cfg)
 
@@ -35,7 +47,7 @@ func main() {
 		Part:          handlers.NewPartHandler(pool),
 		Blog:          handlers.NewBlogHandler(pool),
 		Telemetry:     handlers.NewTelemetryHandler(pool),
-		Inventory:     handlers.NewInventoryHandler(pool),
+		Inventory:     handlers.NewInventoryHandler(pool, eventSvc),
 		Procurement:   handlers.NewProcurementHandler(pool),
 		Deployment:    handlers.NewDeploymentHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),

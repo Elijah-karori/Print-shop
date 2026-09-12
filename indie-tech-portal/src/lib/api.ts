@@ -129,6 +129,15 @@ export interface SupplierFailureMetric {
   failure_rate_percentage: number;
 }
 
+export interface InventoryAnalyticsResponse {
+  total_units: number;
+  total_value_kes: number;
+  status_breakdown: { status: string; count: number }[];
+  recalled_units: number;
+  in_stock_units: number;
+  deployed_units: number;
+}
+
 export interface SearchResultItem {
   category: 'part' | 'machine' | 'job_card' | 'documentation' | 'serialized_item';
   id: string;
@@ -258,6 +267,24 @@ export function getMTBFMetrics(): Promise<MTBFMetric[]> {
 
 export function getSupplierFailureMetrics(): Promise<SupplierFailureMetric[]> {
   return request<SupplierFailureMetric[]>('/api/v1/analytics/suppliers');
+}
+
+export function getInventoryAnalytics(): Promise<InventoryAnalyticsResponse> {
+  return request<InventoryAnalyticsResponse>('/api/v1/admin/inventory/analytics');
+}
+
+export function addItemUnit(input: { part_id: string; serial_number: string; unit_cost_kes: number }): Promise<ItemUnit> {
+  return request<ItemUnit>('/api/v1/admin/inventory/unit', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function triggerRecall(input: { serial_number: string; recall_reason: string }): Promise<{ status: string; serial_number: string }> {
+  return request<{ status: string; serial_number: string }>('/api/v1/admin/inventory/recall', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function recordTelemetry(input: RecordTelemetryInput): Promise<{ status: string }> {
