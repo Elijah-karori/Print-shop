@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Plus, AlertOctagon, RefreshCw, CheckCircle2, AlertCircle, Loader2, Truck, Users } from 'lucide-react';
+import { Package, Plus, AlertOctagon, RefreshCw, CheckCircle2, AlertCircle, Loader2, Truck, Users, ScanLine } from 'lucide-react';
 import { listItemUnits, listSuppliers, listDeployments, getInventoryAnalytics, addItemUnit, triggerRecall, type ItemUnit, type Supplier, type Deployment, type InventoryAnalyticsResponse } from '../lib/api';
 
 const addUnitSchema = z.object({
@@ -15,7 +15,15 @@ const recallSchema = z.object({
   recall_reason: z.string().min(5, 'Recall reason must be at least 5 characters'),
 });
 
+const receiveSchema = z.object({
+  po_line_id: z.string().uuid('Valid PO Line UUID required'),
+  received_qty: z.number().int().positive('Quantity must be greater than 0'),
+  serial_prefix: z.string().optional(),
+});
+
 export function Inventory() {
+  const [tab, setTab] = useState<'units' | 'receive' | 'suppliers' | 'deployments'>('units');
+
   const [units, setUnits] = useState<ItemUnit[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -41,6 +49,14 @@ export function Inventory() {
   const [recallFormErrors, setRecallFormErrors] = useState<Record<string, string>>({});
   const [recallSubmitting, setRecallSubmitting] = useState(false);
   const [recallSuccess, setRecallSuccess] = useState(false);
+
+  // Receive Stock Form (PO line receiving)
+  const [poLineId, setPoLineId] = useState('');
+  const [receivedQty, setReceivedQty] = useState('10');
+  const [serialPrefix, setSerialPrefix] = useState('SN-RCV-');
+  const [receiveErrors, setReceiveErrors] = useState<Record<string, string>>({});
+  const [receiveSubmitting, setReceiveSubmitting] = useState(false);
+  const [receiveSuccess, setReceiveSuccess] = useState(false);
 
   const loadData = () => {
     setLoading(true);
@@ -140,6 +156,47 @@ export function Inventory() {
     }
   };
 
+  const handleReceiveStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReceiveErrors({});
+    const qtyNum = parseInt(receivedQty, 10);
+
+    const validation = receiveSchema.safeParse({
+      po_line_id: poLineId,
+      received_qty: isNaN(qtyNum) ? 0 : qtyNum,
+      serial_prefix: serialPrefix,
+    });
+
+    if (!validation.success) {
+      const formatted: Record<string, string> = {};
+      validation.error.issues.forEach((issue: any) => {
+        if (issue.path[0]) formatted[issue.path[0].toString()] = issue.message;
+      });
+      setReceiveErrors(formatted);
+      return;
+    }
+
+    setReceiveSubmitting(true);
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/admin/procurement/receive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validation.data),
+      });
+      if (!res.ok) throw new Error('Receiving PO stock failed. Check PO line ID.');
+      setReceiveSuccess(true);
+      setTimeout(() => {
+        setReceiveSuccess(false);
+        setPoLineId('');
+        loadData();
+      }, 1500);
+    } catch (err: any) {
+      setReceiveErrors({ submit: err.message || 'Failed to process receipt' });
+    } finally {
+      setReceiveSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-10 pb-12">
       {/* Header */}
@@ -178,6 +235,42 @@ export function Inventory() {
         </motion.div>
       )}
 
+      {/* Navigation tabs */}
+      <div className="flex items-center gap-2 border-b border-line pb-2 font-mono text-xs">
+        <button
+          onClick={() => setTab('units')}
+          className={`rounded-lg px-4 py-2 font-bold transition-colors ${
+            tab === 'units' ? 'bg-diag/10 border border-diag text-diag' : 'text-inkMuted hover:text-ink'
+          }`}
+        >
+          SERIALIZED UNITS ({units.length})
+        </button>
+        <button
+          onClick={() => setTab('receive')}
+          className={`rounded-lg px-4 py-2 font-bold transition-colors ${
+            tab === 'receive' ? 'bg-diag/10 border border-diag text-diag' : 'text-inkMuted hover:text-ink'
+          }`}
+        >
+          RECEIVE PO STOCK
+        </button>
+        <button
+          onClick={() => setTab('suppliers')}
+          className={`rounded-lg px-4 py-2 font-bold transition-colors ${
+            tab === 'suppliers' ? 'bg-diag/10 border border-diag text-diag' : 'text-inkMuted hover:text-ink'
+          }`}
+        >
+          SUPPLIERS ({suppliers.length})
+        </button>
+        <button
+          onClick={() => setTab('deployments')}
+          className={`rounded-lg px-4 py-2 font-bold transition-colors ${
+            tab === 'deployments' ? 'bg-diag/10 border border-diag text-diag' : 'text-inkMuted hover:text-ink'
+          }`}
+        >
+          DEPLOYMENTS ({deployments.length})
+        </button>
+      </div>
+
       {/* KPI Stats */}
       {analytics && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -197,116 +290,190 @@ export function Inventory() {
         </div>
       )}
 
-      {/* Serialized Item Units Table */}
-      <section className="space-y-4">
-        <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
-          <Package className="h-4 w-4" /> SERIALIZED ITEM UNITS (LOCKED COST AT RECEIPT)
-        </h2>
-        {loading ? (
-          <div className="h-32 flex items-center justify-center font-mono text-xs text-inkMuted">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading units...
-          </div>
-        ) : units.length === 0 ? (
-          <p className="text-sm text-inkMuted">No serialized item units recorded yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
-            <table className="w-full text-left font-mono text-xs text-ink">
-              <thead className="border-b border-line bg-background text-inkMuted">
-                <tr>
-                  <th className="p-3">SERIAL NUMBER</th>
-                  <th className="p-3">STATUS</th>
-                  <th className="p-3">LOCKED UNIT COST</th>
-                  <th className="p-3">RECEIVED AT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {units.map((unit) => (
-                  <tr key={unit.id} className="hover:bg-background/50 transition-colors">
-                    <td className="p-3 text-diag font-bold">{unit.serial_number}</td>
-                    <td className="p-3 uppercase">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
-                        unit.status === 'recalled'
-                          ? 'border-amber/40 bg-amber/10 text-amber'
-                          : 'border-diag/40 bg-diag/10 text-diag'
-                      }`}>
-                        {unit.status}
-                      </span>
-                    </td>
-                    <td className="p-3">KES {unit.unit_cost_kes.toLocaleString()}</td>
-                    <td className="p-3">{new Date(unit.created_at).toLocaleDateString('en-KE')}</td>
+      {/* Tab 1: Serialized Item Units Table */}
+      {tab === 'units' && (
+        <section className="space-y-4">
+          <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
+            <Package className="h-4 w-4" /> SERIALIZED ITEM UNITS (LOCKED COST AT RECEIPT)
+          </h2>
+          {loading ? (
+            <div className="h-32 flex items-center justify-center font-mono text-xs text-inkMuted">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading units...
+            </div>
+          ) : units.length === 0 ? (
+            <p className="text-sm text-inkMuted">No serialized item units recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+              <table className="w-full text-left font-mono text-xs text-ink">
+                <thead className="border-b border-line bg-background text-inkMuted">
+                  <tr>
+                    <th className="p-3">SERIAL NUMBER</th>
+                    <th className="p-3">STATUS</th>
+                    <th className="p-3">LOCKED UNIT COST</th>
+                    <th className="p-3">RECEIVED AT</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {units.map((unit) => (
+                    <tr key={unit.id} className="hover:bg-background/50 transition-colors">
+                      <td className="p-3 text-diag font-bold">{unit.serial_number}</td>
+                      <td className="p-3 uppercase">
+                        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                          unit.status === 'recalled'
+                            ? 'border-amber/40 bg-amber/10 text-amber'
+                            : 'border-diag/40 bg-diag/10 text-diag'
+                        }`}>
+                          {unit.status}
+                        </span>
+                      </td>
+                      <td className="p-3">KES {unit.unit_cost_kes.toLocaleString()}</td>
+                      <td className="p-3">{new Date(unit.created_at).toLocaleDateString('en-KE')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* Suppliers Table */}
-      <section className="space-y-4">
-        <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
-          <Truck className="h-4 w-4" /> SUPPLIER DIRECTORY
-        </h2>
-        {suppliers.length === 0 ? (
-          <p className="text-sm text-inkMuted">No registered suppliers yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
-            <table className="w-full text-left font-mono text-xs text-ink">
-              <thead className="border-b border-line bg-background text-inkMuted">
-                <tr>
-                  <th className="p-3">SUPPLIER NAME</th>
-                  <th className="p-3">CONTACT PHONE</th>
-                  <th className="p-3">EMAIL</th>
-                  <th className="p-3 text-diag">RATING</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {suppliers.map((s) => (
-                  <tr key={s.id} className="hover:bg-background/50 transition-colors">
-                    <td className="p-3 font-bold">{s.name}</td>
-                    <td className="p-3">{s.contact_phone || '—'}</td>
-                    <td className="p-3">{s.contact_email || '—'}</td>
-                    <td className="p-3 text-diag font-bold">{s.rating} / 5.0</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* Tab 2: Receive PO Stock Flow */}
+      {tab === 'receive' && (
+        <section className="max-w-lg space-y-6">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-md">
+            <h2 className="font-mono text-sm font-bold text-ink uppercase flex items-center gap-2 mb-4">
+              <ScanLine className="h-5 w-5 text-diag" /> PROCESS PURCHASE ORDER RECEIPT
+            </h2>
 
-      {/* Deployments Table */}
-      <section className="space-y-4">
-        <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
-          <Users className="h-4 w-4" /> ACTIVE DEPLOYMENTS &amp; HANDOFFS
-        </h2>
-        {deployments.length === 0 ? (
-          <p className="text-sm text-inkMuted">No active unit deployments.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
-            <table className="w-full text-left font-mono text-xs text-ink">
-              <thead className="border-b border-line bg-background text-inkMuted">
-                <tr>
-                  <th className="p-3">ITEM UNIT ID</th>
-                  <th className="p-3">ASSIGNED TO</th>
-                  <th className="p-3">DEPLOYED AT</th>
-                  <th className="p-3">STATUS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {deployments.map((d) => (
-                  <tr key={d.id} className="hover:bg-background/50 transition-colors">
-                    <td className="p-3 font-bold font-mono">{d.item_unit_id}</td>
-                    <td className="p-3">{d.assigned_to}</td>
-                    <td className="p-3">{new Date(d.deployed_at).toLocaleDateString('en-KE')}</td>
-                    <td className="p-3 uppercase">{d.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {receiveErrors.submit && (
+              <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 font-mono text-xs text-red-400">
+                {receiveErrors.submit}
+              </div>
+            )}
+
+            {receiveSuccess ? (
+              <div className="py-8 font-mono text-xs text-diag flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="h-10 w-10 animate-bounce" /> Bulk PO units received &amp; NATS event published!
+              </div>
+            ) : (
+              <form onSubmit={handleReceiveStockSubmit} className="space-y-4 font-mono text-xs">
+                <div>
+                  <label className="block text-inkMuted uppercase mb-1">PO Line UUID *</label>
+                  <input
+                    type="text"
+                    value={poLineId}
+                    onChange={(e) => setPoLineId(e.target.value)}
+                    placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
+                    className="w-full rounded-lg border border-line bg-background p-2.5 text-ink outline-none focus:border-diag"
+                  />
+                  {receiveErrors.po_line_id && <p className="mt-1 text-red-400">{receiveErrors.po_line_id}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-inkMuted uppercase mb-1">Received Quantity *</label>
+                  <input
+                    type="number"
+                    value={receivedQty}
+                    onChange={(e) => setReceivedQty(e.target.value)}
+                    placeholder="10"
+                    className="w-full rounded-lg border border-line bg-background p-2.5 text-ink outline-none focus:border-diag"
+                  />
+                  {receiveErrors.received_qty && <p className="mt-1 text-red-400">{receiveErrors.received_qty}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-inkMuted uppercase mb-1">Serial Number Prefix</label>
+                  <input
+                    type="text"
+                    value={serialPrefix}
+                    onChange={(e) => setSerialPrefix(e.target.value)}
+                    placeholder="SN-RCV-"
+                    className="w-full rounded-lg border border-line bg-background p-2.5 text-ink outline-none focus:border-diag"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={receiveSubmitting}
+                  className="w-full rounded-lg border border-diag bg-diag/10 py-3 font-bold text-diag hover:bg-diag/20 transition-colors disabled:opacity-50"
+                >
+                  {receiveSubmitting ? 'PROCESSING PO RECEIPT...' : 'CONFIRM RECEIPT &amp; SPAWN UNITS →'}
+                </button>
+              </form>
+            )}
           </div>
-        )}
-      </section>
+        </section>
+      )}
+
+      {/* Tab 3: Suppliers Table */}
+      {tab === 'suppliers' && (
+        <section className="space-y-4">
+          <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
+            <Truck className="h-4 w-4" /> SUPPLIER DIRECTORY
+          </h2>
+          {suppliers.length === 0 ? (
+            <p className="text-sm text-inkMuted">No registered suppliers yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+              <table className="w-full text-left font-mono text-xs text-ink">
+                <thead className="border-b border-line bg-background text-inkMuted">
+                  <tr>
+                    <th className="p-3">SUPPLIER NAME</th>
+                    <th className="p-3">CONTACT PHONE</th>
+                    <th className="p-3">EMAIL</th>
+                    <th className="p-3 text-diag">RATING</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {suppliers.map((s) => (
+                    <tr key={s.id} className="hover:bg-background/50 transition-colors">
+                      <td className="p-3 font-bold">{s.name}</td>
+                      <td className="p-3">{s.contact_phone || '—'}</td>
+                      <td className="p-3">{s.contact_email || '—'}</td>
+                      <td className="p-3 text-diag font-bold">{s.rating} / 5.0</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Tab 4: Deployments Table */}
+      {tab === 'deployments' && (
+        <section className="space-y-4">
+          <h2 className="font-mono text-xs tracking-wider text-amber uppercase flex items-center gap-2">
+            <Users className="h-4 w-4" /> ACTIVE DEPLOYMENTS &amp; HANDOFFS
+          </h2>
+          {deployments.length === 0 ? (
+            <p className="text-sm text-inkMuted">No active unit deployments.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+              <table className="w-full text-left font-mono text-xs text-ink">
+                <thead className="border-b border-line bg-background text-inkMuted">
+                  <tr>
+                    <th className="p-3">ITEM UNIT ID</th>
+                    <th className="p-3">ASSIGNED TO</th>
+                    <th className="p-3">DEPLOYED AT</th>
+                    <th className="p-3">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {deployments.map((d) => (
+                    <tr key={d.id} className="hover:bg-background/50 transition-colors">
+                      <td className="p-3 font-bold font-mono">{d.item_unit_id}</td>
+                      <td className="p-3">{d.assigned_to}</td>
+                      <td className="p-3">{new Date(d.deployed_at).toLocaleDateString('en-KE')}</td>
+                      <td className="p-3 uppercase">{d.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Add Unit Modal */}
       <AnimatePresence>
