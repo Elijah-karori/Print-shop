@@ -3,19 +3,22 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
+	"github.com/elijah-karori/indie-tech-api/internal/events"
 	"github.com/elijah-karori/indie-tech-api/internal/models"
 )
 
 type ProcurementHandler struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
+	events *events.EventService
 }
 
-func NewProcurementHandler(db *pgxpool.Pool) *ProcurementHandler {
-	return &ProcurementHandler{db: db}
+func NewProcurementHandler(db *pgxpool.Pool, events *events.EventService) *ProcurementHandler {
+	return &ProcurementHandler{db: db, events: events}
 }
 
 type CreateSupplierInput struct {
@@ -194,6 +197,22 @@ func (h *ProcurementHandler) ProcessReceipt(c echo.Context) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to commit receipt"})
+	}
+
+	// Publish NATS event if event service is set
+	if h.events != nil && len(createdUnits) > 0 {
+		unitIDs := make([]string, len(createdUnits))
+		for i, u := range createdUnits {
+			unitIDs[i] = u.ID.String()
+		}
+		_ = h.events.PublishItemsReceived(ctx, events.ItemsReceivedPayload{
+			ReceiptID:   receiptID.String(),
+			POLineID:    input.POLineID.String(),
+			PartID:      partID.String(),
+			UnitIDs:     unitIDs,
+			UnitCostKES: unitPrice,
+			Timestamp:   time.Now(),
+		})
 	}
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{

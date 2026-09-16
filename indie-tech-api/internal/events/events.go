@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	StreamName            = "INVENTORY"
-	StreamSubjects        = "inventory.*"
-	SubjectItemAdded      = "inventory.item_added"
-	SubjectItemRecalled   = "inventory.item_recalled"
+	StreamName               = "INVENTORY"
+	StreamSubjects           = "inventory.*"
+	SubjectItemAdded         = "inventory.item_added"
+	SubjectItemRecalled      = "inventory.item_recalled"
+	SubjectItemsReceived     = "inventory.items_received"
 	DurableAnalyticsConsumer = "inventory-analytics-consumer"
 )
 
@@ -40,6 +41,15 @@ type ItemRecalledPayload struct {
 	SerialNumber string    `json:"serial_number"`
 	Reason       string    `json:"reason"`
 	Timestamp    time.Time `json:"timestamp"`
+}
+
+type ItemsReceivedPayload struct {
+	ReceiptID   string    `json:"receipt_id"`
+	POLineID    string    `json:"po_line_id"`
+	PartID      string    `json:"part_id"`
+	UnitIDs     []string  `json:"unit_ids"`
+	UnitCostKES float64   `json:"unit_cost_kes"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 func StartEmbeddedNATS(db *pgxpool.Pool) (*EventService, error) {
@@ -136,6 +146,18 @@ func (es *EventService) PublishItemRecalled(ctx context.Context, payload ItemRec
 	return err
 }
 
+func (es *EventService) PublishItemsReceived(ctx context.Context, payload ItemsReceivedPayload) error {
+	if es == nil || es.js == nil {
+		return nil
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = es.js.Publish(SubjectItemsReceived, data)
+	return err
+}
+
 // Consumers
 
 func (es *EventService) startConsumers() error {
@@ -151,6 +173,13 @@ func (es *EventService) startConsumers() error {
 			var p ItemRecalledPayload
 			if err := json.Unmarshal(m.Data, &p); err == nil {
 				es.recordAnalyticsEvent("item_recalled", p.UnitID, p)
+			}
+		case SubjectItemsReceived:
+			var p ItemsReceivedPayload
+			if err := json.Unmarshal(m.Data, &p); err == nil {
+				for _, unitID := range p.UnitIDs {
+					es.recordAnalyticsEvent("item_added", unitID, p)
+				}
 			}
 		}
 	}, nats.Durable(DurableAnalyticsConsumer), nats.ManualAck())

@@ -7,6 +7,8 @@ import { Shop } from './pages/Shop';
 import { Checkout } from './pages/Checkout';
 import { Inventory } from './pages/Inventory';
 import { Analytics } from './pages/Analytics';
+import { Admin } from './pages/Admin';
+import { Technician } from './pages/Technician';
 import { Blog } from './pages/Blog';
 import { ArticleDetail } from './pages/ArticleDetail';
 import { SearchPage } from './pages/SearchPage';
@@ -15,11 +17,11 @@ export function App() {
   return (
     <div className="trace-bg min-h-screen font-sans">
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-          <Link to="/" className="font-mono text-sm tracking-wider text-ink">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+          <Link to="/" className="font-mono text-sm tracking-wider text-ink shrink-0 mr-4">
             INDIE<span className="text-diag">·</span>TECH
           </Link>
-          <nav className="flex gap-6 font-mono text-xs tracking-wide text-inkMuted">
+          <nav className="flex flex-wrap items-center gap-4 sm:gap-6 font-mono text-xs tracking-wide text-inkMuted">
             <Link to="/book" className="hover:text-diag transition-colors">
               BOOK REPAIR
             </Link>
@@ -32,9 +34,15 @@ export function App() {
             <Link to="/inventory" className="hover:text-diag transition-colors">
               INVENTORY
             </Link>
-            <Link to="/blog" className="hover:text-diag transition-colors">
-              BLOG &amp; GUIDES
+
+            <Link to="/technician" className="hover:text-diag transition-colors">
+              TECHNICIAN
             </Link>
+
+            <Link to="/admin" className="hover:text-diag transition-colors">
+              ADMIN
+            </Link>
+
             <Link to="/analytics" className="hover:text-diag transition-colors">
               ANALYTICS
             </Link>
@@ -45,7 +53,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-12">
+      <main className="mx-auto max-w-6xl px-6 py-12">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/book" element={<Book />} />
@@ -54,6 +62,8 @@ export function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/shop/checkout" element={<Checkout />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/technician" element={<Technician />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<ArticleDetail />} />
@@ -61,7 +71,7 @@ export function App() {
         </Routes>
       </main>
 
-      <footer className="mx-auto max-w-3xl px-6 py-8 font-mono text-[11px] text-inkMuted">
+      <footer className="mx-auto max-w-6xl px-6 py-8 font-mono text-[11px] text-inkMuted">
         On-site hardware &amp; software repair — Nairobi
       </footer>
     </div>

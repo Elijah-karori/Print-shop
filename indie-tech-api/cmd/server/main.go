@@ -48,7 +48,7 @@ func main() {
 		Blog:          handlers.NewBlogHandler(pool),
 		Telemetry:     handlers.NewTelemetryHandler(pool),
 		Inventory:     handlers.NewInventoryHandler(pool, eventSvc),
-		Procurement:   handlers.NewProcurementHandler(pool),
+		Procurement:   handlers.NewProcurementHandler(pool, eventSvc),
 		Deployment:    handlers.NewDeploymentHandler(pool),
 		JobCard:       handlers.NewJobCardHandler(pool),
 		Search:        handlers.NewSearchHandler(pool),
