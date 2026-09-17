@@ -13,12 +13,16 @@ import (
 )
 
 const (
-	StreamName               = "INVENTORY"
-	StreamSubjects           = "inventory.*"
-	SubjectItemAdded         = "inventory.item_added"
-	SubjectItemRecalled      = "inventory.item_recalled"
-	SubjectItemsReceived     = "inventory.items_received"
-	DurableAnalyticsConsumer = "inventory-analytics-consumer"
+	StreamName               = "PLATFORM_EVENTS"
+	StreamSubjects           = "platform.*"
+	SubjectItemAdded         = "platform.item_added"
+	SubjectItemRecalled      = "platform.item_recalled"
+	SubjectItemsReceived     = "platform.items_received"
+	SubjectTaskCreated       = "platform.task_created"
+	SubjectBidSubmitted      = "platform.bid_submitted"
+	SubjectBidAccepted       = "platform.bid_accepted"
+	SubjectRatingSubmitted   = "platform.rating_submitted"
+	DurableAnalyticsConsumer = "platform-analytics-consumer"
 )
 
 type EventService struct {
@@ -50,6 +54,38 @@ type ItemsReceivedPayload struct {
 	UnitIDs     []string  `json:"unit_ids"`
 	UnitCostKES float64   `json:"unit_cost_kes"`
 	Timestamp   time.Time `json:"timestamp"`
+}
+
+type TaskCreatedPayload struct {
+	TaskID       string    `json:"task_id"`
+	CustomerID   string    `json:"customer_id"`
+	CustomerType string    `json:"customer_type"`
+	ServiceType  string    `json:"service_type"`
+	Title        string    `json:"title"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
+type BidSubmittedPayload struct {
+	BidID        string    `json:"bid_id"`
+	TaskID       string    `json:"task_id"`
+	TechnicianID string    `json:"technician_id"`
+	BidAmountKES float64   `json:"bid_amount_kes"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
+type BidAcceptedPayload struct {
+	TaskID       string    `json:"task_id"`
+	BidID        string    `json:"bid_id"`
+	TechnicianID string    `json:"technician_id"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
+type RatingSubmittedPayload struct {
+	RatingID     string    `json:"rating_id"`
+	TaskID       string    `json:"task_id"`
+	TechnicianID string    `json:"technician_id"`
+	Score        float64   `json:"score"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
 func StartEmbeddedNATS(db *pgxpool.Pool) (*EventService, error) {
@@ -158,6 +194,54 @@ func (es *EventService) PublishItemsReceived(ctx context.Context, payload ItemsR
 	return err
 }
 
+func (es *EventService) PublishTaskCreated(ctx context.Context, payload TaskCreatedPayload) error {
+	if es == nil || es.js == nil {
+		return nil
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = es.js.Publish(SubjectTaskCreated, data)
+	return err
+}
+
+func (es *EventService) PublishBidSubmitted(ctx context.Context, payload BidSubmittedPayload) error {
+	if es == nil || es.js == nil {
+		return nil
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = es.js.Publish(SubjectBidSubmitted, data)
+	return err
+}
+
+func (es *EventService) PublishBidAccepted(ctx context.Context, payload BidAcceptedPayload) error {
+	if es == nil || es.js == nil {
+		return nil
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = es.js.Publish(SubjectBidAccepted, data)
+	return err
+}
+
+func (es *EventService) PublishRatingSubmitted(ctx context.Context, payload RatingSubmittedPayload) error {
+	if es == nil || es.js == nil {
+		return nil
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = es.js.Publish(SubjectRatingSubmitted, data)
+	return err
+}
+
 // Consumers
 
 func (es *EventService) startConsumers() error {
@@ -180,6 +264,26 @@ func (es *EventService) startConsumers() error {
 				for _, unitID := range p.UnitIDs {
 					es.recordAnalyticsEvent("item_added", unitID, p)
 				}
+			}
+		case SubjectTaskCreated:
+			var p TaskCreatedPayload
+			if err := json.Unmarshal(m.Data, &p); err == nil {
+				es.recordAnalyticsEvent("task_created", p.TaskID, p)
+			}
+		case SubjectBidSubmitted:
+			var p BidSubmittedPayload
+			if err := json.Unmarshal(m.Data, &p); err == nil {
+				es.recordAnalyticsEvent("bid_submitted", p.BidID, p)
+			}
+		case SubjectBidAccepted:
+			var p BidAcceptedPayload
+			if err := json.Unmarshal(m.Data, &p); err == nil {
+				es.recordAnalyticsEvent("bid_accepted", p.TaskID, p)
+			}
+		case SubjectRatingSubmitted:
+			var p RatingSubmittedPayload
+			if err := json.Unmarshal(m.Data, &p); err == nil {
+				es.recordAnalyticsEvent("rating_submitted", p.RatingID, p)
 			}
 		}
 	}, nats.Durable(DurableAnalyticsConsumer), nats.ManualAck())

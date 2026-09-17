@@ -7,16 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
+	"github.com/elijah-karori/indie-tech-api/internal/events"
 	"github.com/elijah-karori/indie-tech-api/internal/models"
 	"github.com/elijah-karori/indie-tech-api/internal/scoring"
 )
 
 type TaskHandler struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
+	events *events.EventService
 }
 
-func NewTaskHandler(db *pgxpool.Pool) *TaskHandler {
-	return &TaskHandler{db: db}
+func NewTaskHandler(db *pgxpool.Pool, events *events.EventService) *TaskHandler {
+	return &TaskHandler{db: db, events: events}
 }
 
 type CreateTaskInput struct {
@@ -59,6 +61,17 @@ func (h *TaskHandler) CreateTask(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to create task"})
 	}
 
+	if h.events != nil {
+		_ = h.events.PublishTaskCreated(ctx, events.TaskCreatedPayload{
+			TaskID:       task.ID.String(),
+			CustomerID:   task.CustomerID.String(),
+			CustomerType: task.CustomerType,
+			ServiceType:  task.ServiceType,
+			Title:        task.Title,
+			Timestamp:    time.Now(),
+		})
+	}
+
 	return c.JSON(http.StatusCreated, task)
 }
 
@@ -96,6 +109,16 @@ func (h *TaskHandler) SubmitBid(c echo.Context) error {
 
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to submit bid"})
+	}
+
+	if h.events != nil {
+		_ = h.events.PublishBidSubmitted(ctx, events.BidSubmittedPayload{
+			BidID:        bid.ID.String(),
+			TaskID:       bid.TaskID.String(),
+			TechnicianID: bid.TechnicianID.String(),
+			BidAmountKES: bid.BidAmountKES,
+			Timestamp:    time.Now(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, bid)
@@ -230,6 +253,15 @@ func (h *TaskHandler) AcceptBid(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to commit transaction"})
 	}
 
+	if h.events != nil {
+		_ = h.events.PublishBidAccepted(ctx, events.BidAcceptedPayload{
+			TaskID:       taskID.String(),
+			BidID:        input.BidID.String(),
+			TechnicianID: techID.String(),
+			Timestamp:    time.Now(),
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{"status": "accepted", "assigned_technician_id": techID.String()})
 }
 
@@ -284,6 +316,16 @@ func (h *TaskHandler) SubmitRating(c echo.Context) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to commit rating"})
+	}
+
+	if h.events != nil {
+		_ = h.events.PublishRatingSubmitted(ctx, events.RatingSubmittedPayload{
+			RatingID:     ratingID.String(),
+			TaskID:       input.TaskID.String(),
+			TechnicianID: input.TechnicianID.String(),
+			Score:        input.Score,
+			Timestamp:    time.Now(),
+		})
 	}
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
