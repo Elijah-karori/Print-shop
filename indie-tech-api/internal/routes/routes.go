@@ -22,6 +22,7 @@ type Handlers struct {
 	Search        *handlers.SearchHandler
 	Reliability   *handlers.ReliabilityHandler
 	MpesaCallback *handlers.MpesaCallbackHandler
+	Task          *handlers.TaskHandler
 }
 
 // Register wires up all routes. Public client-facing endpoints (booking a
@@ -84,4 +85,11 @@ func Register(e *echo.Echo, h *Handlers, cfg *config.Config) {
 
 	admin.POST("/jobcards", h.JobCard.Create)
 	admin.POST("/failures", h.Reliability.RecordFailure)
+
+	// --- Task Management & Dynamic Bidding ---
+	api.POST("/tasks", h.Task.CreateTask)
+	api.POST("/tasks/bids", h.Task.SubmitBid)
+	api.GET("/tasks/:id/bids", h.Task.GetTaskBidsRanked)
+	api.POST("/tasks/:id/accept", h.Task.AcceptBid)
+	api.POST("/tasks/ratings", h.Task.SubmitRating)
 }

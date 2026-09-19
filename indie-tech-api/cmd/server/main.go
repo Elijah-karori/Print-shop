@@ -54,6 +54,7 @@ func main() {
 		Search:        handlers.NewSearchHandler(pool),
 		Reliability:   handlers.NewReliabilityHandler(pool),
 		MpesaCallback: handlers.NewMpesaCallbackHandler(pool),
+		Task:          handlers.NewTaskHandler(pool, eventSvc),
 	}
 
 	e := echo.New()

@@ -9,6 +9,7 @@ import { Inventory } from './pages/Inventory';
 import { Analytics } from './pages/Analytics';
 import { Admin } from './pages/Admin';
 import { Technician } from './pages/Technician';
+import { Tasks } from './pages/Tasks';
 import { Blog } from './pages/Blog';
 import { ArticleDetail } from './pages/ArticleDetail';
 import { SearchPage } from './pages/SearchPage';
@@ -33,6 +34,10 @@ export function App() {
             </Link>
             <Link to="/inventory" className="hover:text-diag transition-colors">
               INVENTORY
+            </Link>
+
+            <Link to="/tasks" className="hover:text-diag transition-colors">
+              TASKS &amp; BIDS
             </Link>
 
             <Link to="/technician" className="hover:text-diag transition-colors">
@@ -62,6 +67,7 @@ export function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/shop/checkout" element={<Checkout />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/tasks" element={<Tasks />} />
           <Route path="/technician" element={<Technician />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/analytics" element={<Analytics />} />

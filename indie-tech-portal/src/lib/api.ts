@@ -313,4 +313,127 @@ export function getOrderStatus(orderId: string): Promise<OrderStatusResponse> {
   return request<OrderStatusResponse>(`/api/v1/orders/${orderId}/status`);
 }
 
+export interface Task {
+  id: string;
+  customer_id: string;
+  customer_type: 'enterprise' | 'personal';
+  service_type: 'corrective' | 'preventive' | 'contract_based' | 'project_based' | 'one_time';
+  machine_category_id?: string;
+  title: string;
+  description?: string;
+  target_price_kes?: number;
+  earliest_start_time?: string;
+  deadline_time?: string;
+  state: 'draft' | 'open_for_bidding' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'bidding_closed';
+  assigned_technician_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Technician {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  level: 'junior' | 'intermediate' | 'senior' | 'master';
+  base_callout_fee_kes: number;
+  overall_rating: number;
+  rating_count: number;
+}
+
+export interface Bid {
+  id: string;
+  task_id: string;
+  technician_id: string;
+  bid_amount_kes: number;
+  proposed_start_time?: string;
+  status: 'submitted' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScoredBid {
+  bid: Bid;
+  technician: Technician;
+  reference_price: number;
+  price_score: number;
+  time_score: number;
+  rating_score: number;
+  level_score: number;
+  exp_score: number;
+  total_score: number;
+  weights: {
+    Price: number;
+    Time: number;
+    Rating: number;
+    Level: number;
+    Exp: number;
+  };
+}
+
+export interface RankedBidsResponse {
+  task: Task;
+  bids: ScoredBid[];
+  total: number;
+}
+
+export interface CreateTaskInput {
+  customer_id: string;
+  customer_type?: 'enterprise' | 'personal';
+  service_type: 'corrective' | 'preventive' | 'contract_based' | 'project_based' | 'one_time';
+  machine_category_id?: string;
+  title: string;
+  description?: string;
+  target_price_kes?: number;
+  earliest_start_time?: string;
+  deadline_time?: string;
+}
+
+export interface SubmitBidInput {
+  task_id: string;
+  technician_id: string;
+  bid_amount_kes: number;
+  proposed_start_time?: string;
+}
+
+export interface SubmitRatingInput {
+  task_id: string;
+  technician_id: string;
+  customer_id: string;
+  score: number;
+  review_text?: string;
+}
+
+export function createTask(input: CreateTaskInput): Promise<Task> {
+  return request<Task>('/api/v1/tasks', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function submitBid(input: SubmitBidInput): Promise<Bid> {
+  return request<Bid>('/api/v1/tasks/bids', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getTaskBidsRanked(taskId: string): Promise<RankedBidsResponse> {
+  return request<RankedBidsResponse>(`/api/v1/tasks/${taskId}/bids`);
+}
+
+export function acceptBid(taskId: string, bidId: string): Promise<{ status: string; assigned_technician_id: string }> {
+  return request<{ status: string; assigned_technician_id: string }>(`/api/v1/tasks/${taskId}/accept`, {
+    method: 'POST',
+    body: JSON.stringify({ bid_id: bidId }),
+  });
+}
+
+export function submitRating(input: SubmitRatingInput): Promise<{ rating_id: string; status: string }> {
+  return request<{ rating_id: string; status: string }>('/api/v1/tasks/ratings', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export { APIError };
